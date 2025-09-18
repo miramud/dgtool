@@ -1,0 +1,79 @@
+"use client";
+import { Button } from "@/components/ui/button";
+import Image from "next/image";
+
+export function LandingHeroSection() {
+    return (
+        <section className="relative bg-gradient-to-br from-primary via-[#3F3465] to-purple-800 text-white h-screen">
+            <div className="absolute top-10 left-10 w-72 h-72 bg-white rounded-full filter blur-[100px] opacity-40 animate-pulse"></div>
+            <div className="absolute top-40 right-20 w-96 h-96 bg-white rounded-full filter blur-[120px] opacity-30 animate-pulse"></div>
+            <div className="absolute bottom-20 left-1/4 w-80 h-80 bg-white rounded-full filter blur-[120px] opacity-35 animate-pulse"></div>
+            <div className="absolute bottom-10 right-1/3 w-64 h-64 bg-white rounded-full filter blur-[100px] opacity-25 animate-pulse"></div>
+
+            <div className="py-20 relative z-10" data-aos="fade-up">
+                <div className="max-w-4xl mx-auto text-center">
+                    <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-semibold mb-6 text-[#F4F5F6] leading-tightf">
+                        Take Control of Your Data with Smart Governance
+                    </h1>
+
+                    <Image
+                        src="/images/stroke.svg"
+                        alt="Stroke Divider"
+                        width={200}
+                        height={200}
+                        className="w-[40%] block mx-auto -mt-5"
+                    />
+
+                    <p className="text-base sm:text-lg md:text-xl mb-8 text-purple-100 max-w-2xl mx-auto font-medium leading-relaxed">
+                        Ensure data quality, compliance, and trust with a
+                        platform designed for enterprises of all sizes. Our Data
+                        Governance platform helps enterprises ensure data
+                        quality, security, and compliance — all in one simple,
+                        modern workspace.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12 md:mb-16 px-5">
+                        <Button
+                            size="lg"
+                            className="bg-white text-primary hover:bg-gray-100"
+                        >
+                            Get Started for Free
+                        </Button>
+                        <Button
+                            size="lg"
+                            variant="outline"
+                            className="border-white text-white hover:bg-white hover:text-primary bg-transparent"
+                        >
+                            Book Demo
+                        </Button>
+                    </div>
+                </div>
+
+                <div
+                    className="relative z-30 -mb-32 lg:-mb-40"
+                    data-aos="zoom-in"
+                >
+                    <Image
+                        src="/images/dashboard-mockup.svg"
+                        alt="Dashboard Mockup"
+                        width={1000}
+                        height={1000}
+                        className="w-[80%] md:max-w-4xl mx-auto block drop-shadow-2xl"
+                    />
+                </div>
+            </div>
+
+            <div className="absolute bottom-0 left-0 w-full overflow-hidden z-0">
+                <svg
+                    viewBox="0 0 1200 120"
+                    preserveAspectRatio="none"
+                    className="relative block w-full h-16 md:h-24 lg:h-32"
+                >
+                    <path
+                        d="M0,120L20,100C40,80,80,40,120,35C160,30,200,60,240,70C280,80,320,70,360,65C400,60,440,60,480,70C520,80,560,100,600,105C640,110,680,100,720,90C760,80,800,70,840,60C880,50,920,40,960,45C1000,50,1040,70,1080,80C1120,90,1160,90,1200,80C1240,70,1280,50,1320,40C1360,30,1400,30,1420,30L1440,30L1440,120L1420,120C1400,120,1360,120,1320,120C1280,120,1240,120,1200,120C1160,120,1120,120,1080,120C1040,120,1000,120,960,120C920,120,880,120,840,120C800,120,760,120,720,120C680,120,640,120,600,120C560,120,520,120,480,120C440,120,400,120,360,120C320,120,280,120,240,120C200,120,160,120,120,120C80,120,40,120,20,120L0,120Z"
+                        className="fill-white"
+                    ></path>
+                </svg>
+            </div>
+        </section>
+    );
+}

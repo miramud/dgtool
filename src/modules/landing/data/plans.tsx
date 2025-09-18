@@ -1,0 +1,71 @@
+export const plans = [
+    {
+        name: "Starter Plan",
+        price: "₦19,000",
+        period: "/ month",
+        description: "For small teams just getting started with\n governance",
+        features: [
+            "Up to 10 users",
+            "100 GB storage",
+            "Data Catalog (view & search)",
+            "Metadata management (basic templates)",
+            "Data Quality (profiling only)",
+            "Ownership assignment (single domain)",
+            "Basic user management",
+        ],
+        nonFeatures: [
+            "Advanced workflow automation",
+            "Compliance reporting",
+            "API & Integrations",
+        ],
+        buttonText: "Start Free Trial",
+        buttonVariant: "outline" as const,
+        popular: false,
+    },
+    {
+        name: "Business Plan",
+        price: "₦29,000",
+        period: "/ month",
+        description:
+            "For growing organizations that need full governance visibility",
+        features: [
+            "Up to 100 users",
+            "2 TB storage",
+            "Full Data Catalog (search, filters, custom metadata templates)",
+            "Data Quality (profiling + rule creation + monitoring))",
+            "Ownership & stewardship (multi-domain)",
+            "Workflow automation (approval flows)",
+            "Compliance & audit reports (export to PDF/Excel)",
+            "Data lineage visualization (interactive diagrams)",
+            "Role-based access control",
+        ],
+        nonFeatures: ["Enterprise integrations (SSO, custom APIs)"],
+        buttonText: "Choose Business",
+        buttonVariant: "default" as const,
+        popular: true,
+    },
+    {
+        name: "Enterprise Plan",
+        price: "Contact Us",
+        period: "",
+        description:
+            "For enterprises with complex compliance and integration needs",
+        features: [
+            "Unlimited users",
+            "Custom storage allocation (scale as needed)",
+            "Everything in Business, plus:",
+            "Custom metadata libraries & templates",
+            "Advanced data security (encryption, masking, access audit logs)",
+            "API access & integrations (ERP, CRM, Data Lakes, Cloud)",
+            "SSO + Active Directory integration",
+
+            "Dedicated success manager",
+            "SLA-backed support (24/7)",
+
+            "On-premise / Hybrid deployment options",
+        ],
+        buttonText: "Contact Sales",
+        buttonVariant: "outline" as const,
+        popular: false,
+    },
+];
