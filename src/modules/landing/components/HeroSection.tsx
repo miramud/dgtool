@@ -1,6 +1,8 @@
 "use client";
 import { Button } from "@/components/ui/button";
+import { AUTH_ROUTES } from "@/constants/routes";
 import Image from "next/image";
+import Link from "next/link";
 
 export function LandingHeroSection() {
     return (
@@ -32,19 +34,23 @@ export function LandingHeroSection() {
                         modern workspace.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12 md:mb-16 px-5">
-                        <Button
-                            size="lg"
-                            className="bg-white text-primary hover:bg-gray-100"
-                        >
-                            Get Started for Free
-                        </Button>
-                        <Button
-                            size="lg"
-                            variant="outline"
-                            className="border-white text-white hover:bg-white hover:text-primary bg-transparent"
-                        >
-                            Book Demo
-                        </Button>
+                        <Link href={AUTH_ROUTES.SIGN_UP}>
+                            <Button
+                                size="lg"
+                                className="bg-white text-primary hover:bg-gray-100"
+                            >
+                                Get Started for Free
+                            </Button>
+                        </Link>
+                        <Link href={AUTH_ROUTES.SIGN_UP}>
+                            <Button
+                                size="lg"
+                                variant="outline"
+                                className="border-white text-white hover:bg-white hover:text-primary bg-transparent"
+                            >
+                                Book Demo
+                            </Button>
+                        </Link>
                     </div>
                 </div>
 

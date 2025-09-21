@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@plugin 'tailwind-scrollbar';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -156,4 +157,19 @@
 }
 .btn-loader:after {
     --s: -1, -1;
+}
+
+@keyframes l41 {
+    0% {
+        transform: scale(var(--s, 1)) translate(0, 0);
+    }
+    33% {
+        transform: scale(var(--s, 1)) translate(0, 130%);
+    }
+    66% {
+        transform: scale(var(--s, 1)) translate(400%, 130%);
+    }
+    100% {
+        transform: scale(var(--s, 1)) translate(400%, 0);
+    }
 }

@@ -1,4 +1,6 @@
 import { Button } from "@/components/ui/button";
+import { AUTH_ROUTES } from "@/constants/routes";
+import Link from "next/link";
 
 export function LandingCtaSection() {
     return (
@@ -19,19 +21,23 @@ export function LandingCtaSection() {
                             Try it free for 14 days. No credit card required.
                         </p>
                         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                            <Button
-                                size="lg"
-                                className="bg-white text-primary hover:bg-gray-100"
-                            >
-                                Start Free Trial
-                            </Button>
-                            <Button
-                                size="lg"
-                                variant="outline"
-                                className="border-white text-white hover:bg-white hover:text-primary bg-transparent"
-                            >
-                                Book a Demo
-                            </Button>
+                            <Link href={AUTH_ROUTES.SIGN_UP}>
+                                <Button
+                                    size="lg"
+                                    className="bg-white text-primary hover:bg-gray-100"
+                                >
+                                    Start Free Trial
+                                </Button>
+                            </Link>
+                            <Link href={AUTH_ROUTES.SIGN_UP}>
+                                <Button
+                                    size="lg"
+                                    variant="outline"
+                                    className="border-white text-white hover:bg-white hover:text-primary bg-transparent"
+                                >
+                                    Book a Demo
+                                </Button>
+                            </Link>
                         </div>
                     </div>
                 </section>

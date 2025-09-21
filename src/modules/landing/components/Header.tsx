@@ -4,6 +4,9 @@ import { Button } from "@/components/ui/button";
 import { headerNavItems } from "../data/header-nav-items";
 import Image from "next/image";
 import { X } from "lucide-react";
+import Logo from "@/components/shared/Logo";
+import Link from "next/link";
+import { AUTH_ROUTES } from "@/constants/routes";
 
 export default function LandingHeader() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -15,13 +18,7 @@ export default function LandingHeader() {
                 data-aos="fade-in"
             >
                 <div className="max-w-[80%] mx-auto px-4 py-4 flex items-center justify-between">
-                    <Image
-                        src="/images/logo.svg"
-                        alt="Data Loom Logo"
-                        width={200}
-                        height={200}
-                        className="w-[130px]"
-                    />
+                    <Logo />
 
                     <nav className="hidden md:flex items-center space-x-8">
                         {headerNavItems.map(({ label, href }, i) => (
@@ -36,14 +33,19 @@ export default function LandingHeader() {
                     </nav>
 
                     <div className="hidden md:flex items-center space-x-3 text-base">
-                        <Button size="lg">Sign Up</Button>
-                        <Button
-                            variant="outline"
-                            size="lg"
-                            className="bg-transparent"
-                        >
-                            Sign In
-                        </Button>
+                        <Link href={AUTH_ROUTES.SIGN_UP}>
+                            <Button size="lg">Sign Up</Button>
+                        </Link>
+
+                        <Link href={AUTH_ROUTES.SIGN_IN}>
+                            <Button
+                                variant="outline"
+                                size="lg"
+                                className="bg-transparent"
+                            >
+                                Sign In
+                            </Button>
+                        </Link>
                     </div>
 
                     <button
@@ -109,21 +111,26 @@ export default function LandingHeader() {
                     </nav>
 
                     <div className="flex flex-col space-y-4 w-3/4 max-w-xs px-4">
-                        <Button
-                            size="lg"
-                            className="w-full"
-                            onClick={() => setIsMenuOpen(false)}
-                        >
-                            Sign Up
-                        </Button>
-                        <Button
-                            variant="outline"
-                            size="lg"
-                            className="w-full bg-transparent"
-                            onClick={() => setIsMenuOpen(false)}
-                        >
-                            Sign In
-                        </Button>
+                        <Link href={AUTH_ROUTES.SIGN_UP}>
+                            <Button
+                                size="lg"
+                                className="w-full"
+                                onClick={() => setIsMenuOpen(false)}
+                            >
+                                Sign Up
+                            </Button>
+                        </Link>
+
+                        <Link href={AUTH_ROUTES.SIGN_IN}>
+                            <Button
+                                variant="outline"
+                                size="lg"
+                                className="w-full bg-transparent"
+                                onClick={() => setIsMenuOpen(false)}
+                            >
+                                Sign In
+                            </Button>
+                        </Link>
                     </div>
                 </div>
             )}
