@@ -15,7 +15,7 @@ export function LandingHeroSection() {
             <div className="py-20 relative z-10" data-aos="fade-up">
                 <div className="max-w-4xl mx-auto text-center">
                     <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-semibold mb-6 text-[#F4F5F6] leading-tightf">
-                        Take Control of Your Data with Smart Governance
+                        Meet DataLoom: Your Data, Woven With Trust
                     </h1>
 
                     <Image
@@ -27,11 +27,9 @@ export function LandingHeroSection() {
                     />
 
                     <p className="text-base sm:text-lg md:text-xl mb-8 text-purple-100 max-w-2xl mx-auto font-medium leading-relaxed">
-                        Ensure data quality, compliance, and trust with a
-                        platform designed for enterprises of all sizes. Our Data
-                        Governance platform helps enterprises ensure data
-                        quality, security, and compliance — all in one simple,
-                        modern workspace.
+                        Every decision your business makes relies on data. 
+                        But is your data reliable? Secure? Compliant?  
+                        DataLoom helps you answer yes every time.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12 md:mb-16 px-5">
                         <Link href={AUTH_ROUTES.SIGN_UP}>

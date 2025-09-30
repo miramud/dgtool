@@ -3,17 +3,17 @@ import { AlertTriangle, Shield, Users } from "lucide-react";
 export const propositions = [
     {
         icon: AlertTriangle,
-        title: "Messy Data = Missed Insights",
-        description: "Poor quality data costs enterprises millions.",
+        title: "From Chaos to Clarity",
+        description: "Centralize and classify scattered data into one source of truth.",
     },
     {
         icon: Users,
-        title: "Siloed Ownership",
-        description: "Nobody knows who owns what;\n accountability gets lost.",
+        title: "Errors Out, Trust In",
+        description: "Detect quality issues early and deliver reliable insights.",
     },
     {
         icon: Shield,
-        title: "Regulatory Pressure",
-        description: "Compliance failures bring fines & reputational\n risk.",
+        title: "Govern with Confidence",
+        description: "Protect sensitive data and stay compliant with ease.",
     },
 ];
