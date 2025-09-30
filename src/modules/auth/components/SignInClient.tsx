@@ -25,14 +25,24 @@ export default function SignInClient() {
         },
     });
 
-    const { signIn, isLoading: isSignInLoading } = useSignIn();
+    const { signIn, isLoading: isSignInLoading, data: loginResponse } = useSignIn();
 
     const router = useRouter();
 
     const onSubmit: SubmitHandler<TSignInFormValues> = async (data) => {
-        await signIn(data);
-        toast.success("Sign in successful");
-        router.push(`${AUTH_ROUTES.VERIFY_OTP}?email=${data.email}`);
+        const response = await signIn(data);
+        
+        if (response?.data?.is_mfa_required) {
+            toast.success("Please verify with MFA");
+            router.push(`${AUTH_ROUTES.VERIFY_OTP}?email=${data.email}&mfa=true`);
+        } else if (response?.data?.access_token) {
+            localStorage.setItem("access_token", response.data.access_token);
+            toast.success("Sign in successful");
+            router.push("/dashboard");
+        } else {
+            toast.success("Please verify your email");
+            router.push(`${AUTH_ROUTES.VERIFY_OTP}?email=${data.email}`);
+        }
     };
 
     return (

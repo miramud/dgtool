@@ -17,103 +17,109 @@ import AuthFormHeader from "./AuthFormHeader";
 import { Fragment } from "react";
 
 export default function SignUpClient() {
-    const form = useForm<TSignUpFormValues>({
-        resolver: zodResolver(signUpSchema),
-        defaultValues: {
-            first_name: "",
-            last_name: "",
-            email: "",
-            password: "",
-            confirm_password: "",
-        },
-    });
+  const form = useForm<TSignUpFormValues>({
+    resolver: zodResolver(signUpSchema),
+    defaultValues: {
+      first_name: "",
+      last_name: "",
+      email: "",
+      mobile_number: "",
+      password: "",
+      confirm_password: "",
+    },
+  });
 
-    const router = useRouter();
+  const router = useRouter();
 
-    const requirements = evaluatePassword(form.watch("password"));
+  const requirements = evaluatePassword(form.watch("password"));
 
-    const { signUp, isLoading: isSignUpLoading } = useSignUp();
+  const { signUp, isLoading: isSignUpLoading } = useSignUp();
 
-    const onSubmit: SubmitHandler<TSignUpFormValues> = async (data) => {
-        await signUp(data);
-        toast.success("Sign up successful");
-        router.push(`${AUTH_ROUTES.VERIFY_OTP}?email=${data.email}`);
-    };
+  const onSubmit: SubmitHandler<TSignUpFormValues> = async (data) => {
+    await signUp(data);
+    toast.success("Sign up successful");
+    router.push(`${AUTH_ROUTES.VERIFY_OTP}?email=${data.email}`);
+  };
 
-    return (
-        <Fragment>
-            <AuthFormHeader
-                title="Create An Account"
-                description="Sign up to start tracking your sustainability goals."
-            />
+  return (
+    <Fragment>
+      <AuthFormHeader
+        title='Create An Account'
+        description='Sign up to start tracking your sustainability goals.'
+      />
 
-            <Form {...form}>
-                <form
-                    className="space-y-5"
-                    onSubmit={form.handleSubmit(onSubmit)}
-                >
-                    <FormInput
-                        label="First Name"
-                        name="first_name"
-                        placeholder="Enter your first name"
-                        required
-                    />
+      <Form {...form}>
+        <form className='space-y-5' onSubmit={form.handleSubmit(onSubmit)}>
+          <FormInput
+            label='First Name'
+            name='first_name'
+            placeholder='Enter your first name'
+            required
+          />
 
-                    <FormInput
-                        label="Last Name"
-                        name="last_name"
-                        placeholder="Enter your last name"
-                        required
-                    />
+          <FormInput
+            label='Last Name'
+            name='last_name'
+            placeholder='Enter your last name'
+            required
+          />
 
-                    <FormInput
-                        label="Email Address"
-                        name="email"
-                        placeholder="abc@email.com"
-                        required
-                    />
+          <FormInput
+            label='Email Address'
+            name='email'
+            placeholder='abc@email.com'
+            required
+          />
 
-                    <FormInput
-                        type="password"
-                        label="Password"
-                        name="password"
-                        placeholder="Enter password"
-                        required
-                    />
+          <FormInput
+            label='Mobile Number'
+            name='mobile_number'
+            placeholder='+234 123 456 789'
+            required
+            // type='tel'
+          />
 
-                    <FormInput
-                        type="password"
-                        label="Confirm Password"
-                        name="confirm_password"
-                        placeholder="Re-enter password"
-                        required
-                    />
+          <FormInput
+            type='password'
+            label='Password'
+            name='password'
+            placeholder='Enter password'
+            required
+          />
 
-                    <PasswordStrengthIndicator requirements={requirements} />
+          <FormInput
+            type='password'
+            label='Confirm Password'
+            name='confirm_password'
+            placeholder='Re-enter password'
+            required
+          />
 
-                    <Button
-                        type="submit"
-                        className="w-full"
-                        size="lg"
-                        isLoading={isSignUpLoading}
-                    >
-                        Sign Up
-                    </Button>
-                </form>
-            </Form>
+          <PasswordStrengthIndicator requirements={requirements} />
 
-            <footer className="flex items-center justify-between text-sm mt-20">
-                <p>
-                    Already have an account?&nbsp;
-                    <Link href={AUTH_ROUTES.SIGN_IN} className="text-[#3F3465]">
-                        Sign In
-                    </Link>
-                </p>
+          <Button
+            type='submit'
+            className='w-full'
+            size='lg'
+            isLoading={isSignUpLoading}
+          >
+            Sign Up
+          </Button>
+        </form>
+      </Form>
 
-                <Link href="#" className="text-[#3F3465]">
-                    Terms & Conditions
-                </Link>
-            </footer>
-        </Fragment>
-    );
+      <footer className='flex items-center justify-between text-sm mt-20'>
+        <p>
+          Already have an account?&nbsp;
+          <Link href={AUTH_ROUTES.SIGN_IN} className='text-[#3F3465]'>
+            Sign In
+          </Link>
+        </p>
+
+        <Link href='#' className='text-[#3F3465]'>
+          Terms & Conditions
+        </Link>
+      </footer>
+    </Fragment>
+  );
 }

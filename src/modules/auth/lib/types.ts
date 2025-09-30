@@ -14,6 +14,18 @@ export interface ISignUpResponse {
     user_id: string;
 }
 
+export interface ILoginResponse {
+    status: boolean;
+    message: string;
+    data: {
+        access_token: string | null;
+        refresh_token: string | null;
+        token_type: string;
+        force_password_reset: boolean;
+        is_mfa_required: boolean;
+    };
+}
+
 export interface TVerifyEmailFormValues {
     email: string;
     totp: string;

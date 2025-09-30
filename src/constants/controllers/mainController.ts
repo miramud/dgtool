@@ -16,7 +16,7 @@ interface ApiResponse<TData = unknown> {
 interface ApiManagerOptions<TData, TError> {
     endpoint: string;
     queryKey?: string | string[];
-    method?: "POST" | "PUT" | "PATCH" | "DELETE";
+    method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
     isAuth?: boolean;
     showSuccessToast?: boolean;
     contentType?: string | null;
@@ -25,7 +25,7 @@ interface ApiManagerOptions<TData, TError> {
 }
 
 interface ApiManagerReturn<TData, TError, TVariables> {
-    callApi: (details: TVariables) => Promise<ApiResponse<TData>>;
+    callApi: (details?: TVariables) => Promise<ApiResponse<TData>>;
     data: TData | undefined;
     response: ApiResponse<TData> | undefined;
     isLoading: boolean;
@@ -53,13 +53,16 @@ const useApiManager = <TData = unknown, TError = Error, TVariables = unknown>({
         : axiosCaller;
 
     const apiController = async (
-        details: TVariables
+        details?: TVariables
     ): Promise<ApiResponse<TData>> => {
         try {
             let response: AxiosResponse<ApiResponse<TData>>;
             const config = {};
 
             switch (method.toUpperCase()) {
+                case "GET":
+                    response = await axiosInstance.get(endpoint, config);
+                    break;
                 case "POST":
                     response = await axiosInstance.post(
                         endpoint,
@@ -105,7 +108,7 @@ const useApiManager = <TData = unknown, TError = Error, TVariables = unknown>({
         }
     };
 
-    const mutation = useMutation<ApiResponse<TData>, TError, TVariables>({
+    const mutation = useMutation<ApiResponse<TData>, TError, TVariables | undefined>({
         mutationFn: apiController,
         onSuccess: (response) => {
             if (showSuccessToast && response?.message) {
@@ -126,7 +129,7 @@ const useApiManager = <TData = unknown, TError = Error, TVariables = unknown>({
     });
 
     const callApi = async (
-        details: TVariables
+        details?: TVariables
     ): Promise<ApiResponse<TData>> => {
         return await mutation.mutateAsync(details);
     };

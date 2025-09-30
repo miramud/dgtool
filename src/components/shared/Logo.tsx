@@ -1,7 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
-export default function Logo() {
+interface LogoProps {
+    variant?: "default" | "light";
+    className?: string;
+}
+
+export default function Logo({ variant = "default", className }: LogoProps) {
     return (
         <Link href="/" className="inline-block">
             <Image
@@ -9,7 +15,11 @@ export default function Logo() {
                 alt="Data Loom Logo"
                 width={200}
                 height={200}
-                className="w-[130px]"
+                className={cn(
+                    "w-[130px]",
+                    variant === "light" && "brightness-0 invert",
+                    className
+                )}
             />
         </Link>
     );

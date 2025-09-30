@@ -18,8 +18,13 @@ let retryCount = 0;
 
 axiosCallerWithToken.interceptors.request.use(
     async (config) => {
-        const session = await getSession();
-        const token = session?.user?.token;
+        // Try to get token from localStorage first, then fallback to session
+        let token = localStorage.getItem("access_token");
+        
+        if (!token) {
+            const session = await getSession();
+            token = session?.user?.token;
+        }
 
         if (!token && retryCount < 3) {
             retryCount++;

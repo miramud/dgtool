@@ -1,15 +1,15 @@
 import { AUTH_API_ROUTES } from "@/constants/api-routes";
 import useApiManager from "@/constants/controllers/mainController";
 import { AxiosError } from "axios";
-import { ISignUpResponse, TSignInFormValues } from "../lib/types";
+import { ILoginResponse, TSignInFormValues } from "../lib/types";
 
 export const useSignIn = () => {
     const { callApi, data, isLoading, isSuccess, isError, error } =
-        useApiManager<ISignUpResponse, AxiosError, TSignInFormValues>({
+        useApiManager<ILoginResponse, AxiosError, TSignInFormValues>({
             endpoint: AUTH_API_ROUTES.LOGIN,
             method: "POST",
             isAuth: false,
-            showSuccessToast: true,
+            showSuccessToast: false,
             queryKey: ["user"],
         });
 
