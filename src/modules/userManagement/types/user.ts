@@ -1,34 +1,34 @@
 export interface User {
-    id: string;
-    userId: string;
-    fullName: string;
-    email: string;
-    phone: string;
-    roles: string[];
-    status: "active" | "inactive" | "pending";
-    createdAt: string;
-    updatedAt: string;
+  id: string;
+  userId: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  roles: string[];
+  status: "active" | "inactive" | "pending";
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface UserFormData {
-    fullName: string;
-    email: string;
-    phone: string;
-    roles: string[];
+  fullName: string;
+  email: string;
+  phone: string;
+  roles: string[];
 }
 
 export enum UserRole {
-    DATA_OWNER = "Data Owner",
-    BUSINESS_ANALYST = "Business Analyst", 
-    DATA_STEWARD = "Data Steward",
-    COMPLIANCE_OFFICER = "Compliance Officer",
-    ADMIN = "Admin",
+  DATA_OWNER = "Data Owner",
+  BUSINESS_ANALYST = "Business Analyst",
+  DATA_STEWARD = "Data Steward",
+  COMPLIANCE_OFFICER = "Compliance Officer",
+  ADMIN = "Admin",
 }
 
 export enum UserStatus {
-    ACTIVE = "active",
-    INACTIVE = "inactive", 
-    PENDING = "pending",
+  ACTIVE = "active",
+  INACTIVE = "inactive",
+  PENDING = "pending",
 }
 
 // Backend Staff response interface
@@ -51,6 +51,7 @@ export interface BackendStaff {
     last_name: string;
     email: string;
     mobile_number?: string;
+    date_joined: string;
   };
 }
 

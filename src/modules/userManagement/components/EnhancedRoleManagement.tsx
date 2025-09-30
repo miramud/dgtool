@@ -15,7 +15,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { mockRoles } from "../data/mockRoles";
+// import { mockRoles } from "../data/mockRoles";
 import { Role } from "../types/roles";
 import { useGetRoles, useDeleteRole } from "../controllers/rolesController";
 
@@ -50,7 +50,7 @@ export default function EnhancedRoleManagement({
     null
   );
   const [searchValue, setSearchValue] = useState("");
-  const [selectedRole, setSelectedRole] = useState("");
+  // const [selectedRole, setSelectedRole] = useState("");
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -78,11 +78,15 @@ export default function EnhancedRoleManagement({
     };
 
     loadData();
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Update roles when API data changes
   useEffect(() => {
     if (rolesData?.results) {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
       setRoles(rolesData.results);
     }
   }, [rolesData]);
@@ -113,14 +117,14 @@ export default function EnhancedRoleManagement({
     }
 
     // Apply role filter
-    if (selectedRole && selectedRole !== "All Roles") {
-      filteredRoles = filteredRoles.filter((role) =>
-        role.name.includes(selectedRole)
-      );
-    }
+    // if (selectedRole && selectedRole !== "All Roles") {
+    //   filteredRoles = filteredRoles.filter((role) =>
+    //     role.name.includes(selectedRole)
+    //   );
+    // }
 
     return filteredRoles;
-  }, [debouncedSearchValue, selectedRole, roles]);
+  }, [debouncedSearchValue, roles]);
 
   // Table columns configuration
   const columns = [

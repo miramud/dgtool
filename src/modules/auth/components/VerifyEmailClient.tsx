@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { AUTH_ROUTES } from "@/constants/routes";
 import { useResendOtp } from "../controllers/resendOtpController";
-import { signIn } from "next-auth/react";
+// import { signIn } from "next-auth/react";
 import AuthFormHeader from "./AuthFormHeader";
 import { useVerifyEmail } from "../controllers/verifyEmailController";
 import { useVerifyMfa } from "../controllers/verifyMfaController";

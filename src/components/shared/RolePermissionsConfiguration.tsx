@@ -6,20 +6,21 @@ import { useGetPermissions } from "@/modules/userManagement/controllers/rolesCon
 const RolePermissionsConfiguration = ({
   selectedPermissions,
   setSelectedPermissions,
-}) => {
+}: any) => {
   // const { data: permissionData } = useGetPermissionsManager();
   const { getPermissions, data: permissionData } = useGetPermissions();
 
   // Load permissions on component mount
   useEffect(() => {
     getPermissions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <div className='flex flex-col gap-2 bg-white w-full p-5 rounded-[10px]'>
       {/* <h3 className='font-bold'>Permissions</h3> */}
       <div className='grid grid-cols-1 md:grid-cols-3'>
-        {permissionData?.map((module, index) => (
+        {permissionData?.map((module: any, index) => (
           <RolePermissions
             module={module}
             key={index}
@@ -38,31 +39,33 @@ const RolePermissions = ({
   module,
   selectedPermissions,
   setSelectedPermissions,
-}) => {
+}: any) => {
   const [isModuleSelected, setIsModuleSelected] = useState(false);
 
-  const handlePermissionChange = (permission) => {
+  const handlePermissionChange = (permission: any) => {
     if (selectedPermissions.includes(permission)) {
       setSelectedPermissions(
-        selectedPermissions.filter((perm) => perm !== permission)
+        selectedPermissions.filter((perm: any) => perm !== permission)
       );
     } else {
       setSelectedPermissions([...selectedPermissions, permission]);
     }
   };
 
-  const handleModuleChange = (isChecked) => {
+  const handleModuleChange = (isChecked: any) => {
     if (isChecked) {
       // Add all permissions of the module to selectedPermissions
-      const permissionsToAdd = module.permissions.map((perm) => perm.id);
+      const permissionsToAdd = module.permissions.map((perm: any) => perm.id);
       setSelectedPermissions([...selectedPermissions, ...permissionsToAdd]);
       setIsModuleSelected(true);
     } else {
       // Remove all permissions of the module from selectedPermissions
-      const permissionsToRemove = module.permissions.map((perm) => perm.id);
+      const permissionsToRemove = module.permissions.map(
+        (perm: any) => perm.id
+      );
       setSelectedPermissions(
         selectedPermissions.filter(
-          (perm) => !permissionsToRemove.includes(perm)
+          (perm: any) => !permissionsToRemove.includes(perm)
         )
       );
       setIsModuleSelected(false);
@@ -83,7 +86,7 @@ const RolePermissions = ({
             {formatName(module.module)}
           </h4>
           <ul className='grid grid-cols-1  gap-4'>
-            {module?.permissions?.map((permission, index) => {
+            {module?.permissions?.map((permission: any, index: number) => {
               return (
                 <li
                   key={index}

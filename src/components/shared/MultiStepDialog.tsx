@@ -12,14 +12,14 @@ import { cn } from "@/lib/utils";
 
 interface Step {
   id: string;
-  title: string;
   content: ReactNode;
+  title?: string;
 }
 
 interface MultiStepDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  title: string;
+  title?: string;
   steps: Step[];
   onComplete?: () => void;
   finalButtonLabel?: string;
@@ -61,18 +61,18 @@ export default function MultiStepDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className='max-w-2xl'>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
 
         {/* Step Indicator */}
         {!hideStepIndicator && (
-          <div className="flex items-center justify-center mb-6">
+          <div className='flex items-center justify-center mb-6'>
             {steps.map((step, index) => (
-              <div key={step.id} className="flex items-center">
+              <div key={step.id} className='flex items-center'>
                 {/* Step Number */}
-                <div className="flex items-center">
+                <div className='flex items-center'>
                   <div
                     className={cn(
                       "flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium",
@@ -97,18 +97,18 @@ export default function MultiStepDialog({
 
                 {/* Arrow between steps */}
                 {index < steps.length - 1 && (
-                  <div className="mx-4 text-gray-400">
+                  <div className='mx-4 text-gray-400'>
                     <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
+                      className='w-4 h-4'
+                      fill='none'
+                      stroke='currentColor'
+                      viewBox='0 0 24 24'
                     >
                       <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
+                        strokeLinecap='round'
+                        strokeLinejoin='round'
                         strokeWidth={2}
-                        d="M9 5l7 7-7 7"
+                        d='M9 5l7 7-7 7'
                       />
                     </svg>
                   </div>
@@ -119,30 +119,28 @@ export default function MultiStepDialog({
         )}
 
         {/* Step Content */}
-        <div className="min-h-[400px] py-4">
-          {steps[currentStep]?.content}
-        </div>
+        <div className='min-h-[400px] py-4'>{steps[currentStep]?.content}</div>
 
         {/* Navigation Buttons */}
-        <DialogFooter className="flex justify-between">
+        <DialogFooter className='flex justify-between'>
           <div>
             {!isFirstStep && (
-              <Button variant="outline" onClick={handlePrevious}>
+              <Button variant='outline' onClick={handlePrevious}>
                 Previous
               </Button>
             )}
           </div>
-          <div className="flex gap-4">
-            <Button 
-              variant="outline" 
+          <div className='flex gap-4'>
+            <Button
+              variant='outline'
               onClick={handleCancel}
-              className="min-w-[120px]"
+              className='min-w-[120px]'
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleNext}
-              className="bg-[#4A4A7A] hover:bg-[#3A3A6A] min-w-[160px]"
+              className='bg-[#4A4A7A] hover:bg-[#3A3A6A] min-w-[160px]'
             >
               {isLastStep ? finalButtonLabel : "Next"}
             </Button>

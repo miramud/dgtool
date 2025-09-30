@@ -21,6 +21,7 @@ export interface RoleResponse {
   description?: string;
   created_at: string;
   updated_at: string;
+  permissions?: string[];
 }
 
 export interface PermissionResponse {
@@ -107,7 +108,7 @@ export const useCreateRole = () => {
 // Hook for getting a specific role
 export const useGetRole = (roleId: string) => {
   const { callApi, data, isLoading, isSuccess, isError, error } = useApiManager<
-    RoleDetailResponse,
+    RoleResponse,
     AxiosError
   >({
     endpoint: `${AUTH_API_ROUTES.ROLES}/${roleId}`,
@@ -217,7 +218,7 @@ export const useDeleteRole = (roleId: string) => {
 // Hook for listing all permissions
 export const useGetPermissions = () => {
   const { callApi, data, isLoading, isSuccess, isError, error } = useApiManager<
-    PermissionsListResponse,
+    PermissionResponse[],
     AxiosError
   >({
     endpoint: AUTH_API_ROUTES.PERMISSIONS,

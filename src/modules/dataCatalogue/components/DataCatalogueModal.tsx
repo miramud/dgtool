@@ -64,7 +64,6 @@ export default function DataCatalogueModal({
 
   const metadataStep = {
     id: "metadata",
-    // title: isEdit ? "Edit Metadata" : "Metadata",
     content: (
       <Form {...form}>
         <div>
@@ -220,7 +219,6 @@ export default function DataCatalogueModal({
       <MultiStepDialog
         open={open && !showSuccessModal && !showCancelModal}
         onOpenChange={handleCancel}
-        // title={isEdit ? "Edit Data Asset" : "Add New Dataset"}
         steps={steps}
         onComplete={handleComplete}
         finalButtonLabel="Save Dataset"

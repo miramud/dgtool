@@ -28,6 +28,7 @@ import RolePermissionsConfiguration from "../../../components/shared/RolePermiss
 const createRoleSchema = z.object({
   name: z.string().min(1, "Role name is required"),
   description: z.string().optional(),
+  permissions: z.array(z.string()).optional().nullable,
 });
 
 interface CreateRoleModalProps {
@@ -58,7 +59,7 @@ export default function CreateRoleModal({
 
   const { createRole, isLoading: isCreating } = useCreateRole();
   const { updateRole, isLoading: isUpdating } = useUpdateRole(role?.id || "");
-  const { getPermissions, data: permissionsData } = useGetPermissions();
+  const { getPermissions } = useGetPermissions();
   const { getRole, data: roleData } = useGetRole(role?.id || "");
 
   // Load permissions on component mount
@@ -67,6 +68,7 @@ export default function CreateRoleModal({
       getPermissions();
       getRole();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   // Populate form when editing a role
@@ -78,6 +80,8 @@ export default function CreateRoleModal({
 
       const flatPermissionIds =
         roleData.permissions?.flatMap((module) =>
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
           module.permissions.map((perm) => perm.id)
         ) || [];
 
@@ -87,6 +91,7 @@ export default function CreateRoleModal({
       form.reset();
       setSelectedPermissions([]);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [role, form, roleData]);
 
   const isLoading = isCreating || isUpdating;

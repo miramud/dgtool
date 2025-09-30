@@ -3,6 +3,7 @@ export interface Role {
   roleId: string;
   name: string;
   permissions: string[];
+  permissions_count?: string[];
   status: "active" | "inactive" | "pending";
   description?: string;
   createdAt: string;

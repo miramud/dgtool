@@ -1,5 +1,6 @@
 "use client";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 interface AvatarWithNameProps {
   title: string;
@@ -19,7 +20,7 @@ export default function AvatarWithName({
   const getInitials = (name: string) => {
     return name
       .split(" ")
-      .map(word => word.charAt(0))
+      .map((word) => word.charAt(0))
       .join("")
       .toUpperCase()
       .slice(0, 2);
@@ -39,32 +40,40 @@ export default function AvatarWithName({
 
   return (
     <div className={cn("flex items-center space-x-3", className)}>
-      <div className={cn(
-        "rounded-full bg-[#4A4A7A] text-white flex items-center justify-center font-medium",
-        sizeClasses[size]
-      )}>
+      <div
+        className={cn(
+          "rounded-full bg-[#4A4A7A] text-white flex items-center justify-center font-medium",
+          sizeClasses[size]
+        )}
+      >
         {avatarUrl ? (
-          <img
+          <Image
+            width={40}
+            height={40}
             src={avatarUrl}
             alt={title}
-            className="w-full h-full rounded-full object-cover"
+            className='w-full h-full rounded-full object-cover'
           />
         ) : (
           getInitials(title)
         )}
       </div>
-      <div className="min-w-0 flex-1">
-        <p className={cn(
-          "font-medium text-gray-900 truncate",
-          textSizeClasses[size]
-        )}>
+      <div className='min-w-0 flex-1'>
+        <p
+          className={cn(
+            "font-medium text-gray-900 truncate",
+            textSizeClasses[size]
+          )}
+        >
           {title}
         </p>
         {subtitle && (
-          <p className={cn(
-            "text-gray-500 truncate",
-            size === "sm" ? "text-xs" : "text-sm"
-          )}>
+          <p
+            className={cn(
+              "text-gray-500 truncate",
+              size === "sm" ? "text-xs" : "text-sm"
+            )}
+          >
             {subtitle}
           </p>
         )}

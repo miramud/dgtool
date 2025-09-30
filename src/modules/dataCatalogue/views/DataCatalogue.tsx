@@ -2,7 +2,15 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Search, Filter, ChevronDown, Upload, Database } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Search,
+  Filter,
+  ChevronDown,
+  Upload,
+  Database,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,19 +56,26 @@ export default function DataCatalogue({
 }: EnhancedDataCatalogueProps) {
   const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedDataCatalogue, setSelectedDataCatalogue] = useState<DataCatalogue | null>(null);
-  const [selectedDataCatalogues, setSelectedDataCatalogues] = useState<DataCatalogue[]>([]);
+  const [selectedDataCatalogue, setSelectedDataCatalogue] =
+    useState<DataCatalogue | null>(null);
+  const [selectedDataCatalogues, setSelectedDataCatalogues] = useState<
+    DataCatalogue[]
+  >([]);
   const [searchValue, setSearchValue] = useState("");
-  const [selectedBusinessDescription, setSelectedBusinessDescription] = useState("");
+  const [selectedBusinessDescription, setSelectedBusinessDescription] =
+    useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [requestAccessModalOpen, setRequestAccessModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  // const [isLoading, setIsLoading] = useState(false);
 
   const debouncedSearchValue = useDebounce(searchValue, 500);
 
   // BusinessDescription options for filtering (mimicking performance dialog pattern)
-  const businessDescriptionOptions = ["All Business Descriptions", ...Object.values(BusinessDescription)];
+  const businessDescriptionOptions = [
+    "All Business Descriptions",
+    ...Object.values(BusinessDescription),
+  ];
 
   // Filter data catalogue based on search and business description
   const filteredDataCatalogue = useMemo(() => {
@@ -76,14 +91,23 @@ export default function DataCatalogue({
           item.businessDescription
             .toLowerCase()
             .includes(debouncedSearchValue.toLowerCase()) ||
-          item.usageGuidelines.toLowerCase().includes(debouncedSearchValue.toLowerCase()) ||
-          item.tags.some(tag => tag.toLowerCase().includes(debouncedSearchValue.toLowerCase()))
+          item.usageGuidelines
+            .toLowerCase()
+            .includes(debouncedSearchValue.toLowerCase()) ||
+          item.tags.some((tag) =>
+            tag.toLowerCase().includes(debouncedSearchValue.toLowerCase())
+          )
       );
     }
 
     // Apply business description filter
-    if (selectedBusinessDescription && selectedBusinessDescription !== "All Business Descriptions") {
-      dataCatalogue = dataCatalogue.filter((item) => item.businessDescription === selectedBusinessDescription);
+    if (
+      selectedBusinessDescription &&
+      selectedBusinessDescription !== "All Business Descriptions"
+    ) {
+      dataCatalogue = dataCatalogue.filter(
+        (item) => item.businessDescription === selectedBusinessDescription
+      );
     }
 
     return dataCatalogue;
@@ -91,28 +115,42 @@ export default function DataCatalogue({
 
   // Table columns configuration
   const columns = [
-    { key: "businessTechnicalSpecification", header: "Business/Technical Specification" },
-    { key: "businessDescription", header: "Business Description"},
-    { key: "usageGuidelines", header: "Usage Guidelines"},
-    { key: "tags", header: "Tags"},
-    { key: "date", header: "Date"},
-    { key: "dataSource", header: "Data Source"},
+    {
+      key: "businessTechnicalSpecification",
+      header: "Business/Technical Specification",
+    },
+    { key: "businessDescription", header: "Business Description" },
+    { key: "usageGuidelines", header: "Usage Guidelines" },
+    { key: "tags", header: "Tags" },
+    { key: "date", header: "Date" },
+    { key: "dataSource", header: "Data Source" },
   ];
 
   // Format table cell data
   const getFormattedValue = (item: DataCatalogue, columnKey: string) => {
     switch (columnKey) {
       case "businessTechnicalSpecification":
-        return <span className='text-gray-900'>{item.businessTechnicalSpecification}</span>;
+        return (
+          <span className='text-gray-900'>
+            {item.businessTechnicalSpecification}
+          </span>
+        );
       case "businessDescription":
-        return <span className='text-gray-900'>{item.businessDescription}</span>;
+        return (
+          <span className='text-gray-900'>{item.businessDescription}</span>
+        );
       case "usageGuidelines":
         return <span className='text-gray-900'>{item.usageGuidelines}</span>;
       case "tags":
         return (
           <div className='flex flex-wrap gap-1'>
             {item.tags.slice(0, 2).map((tag, index) => (
-              <StatusBadge key={index} status={tag} variant='default' className="bg-blue-100 text-blue-800" />
+              <StatusBadge
+                key={index}
+                status={tag}
+                variant='default'
+                className='bg-blue-100 text-blue-800'
+              />
             ))}
             {item.tags.length > 2 && (
               <StatusBadge
@@ -209,8 +247,8 @@ export default function DataCatalogue({
               <ChevronDown className='w-4 h-4 ml-2' />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuItem 
+          <DropdownMenuContent align='end' className='w-56'>
+            <DropdownMenuItem
               onClick={() => {
                 setSelectedDataCatalogue(null);
                 setModalOpen(true);
@@ -225,16 +263,22 @@ export default function DataCatalogue({
                 Connect to Data Source
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent>
-                <DropdownMenuItem onClick={() => console.log('PostgreSQL selected')}>
+                <DropdownMenuItem
+                  onClick={() => console.log("PostgreSQL selected")}
+                >
                   PostgreSQL
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => console.log('REST API selected')}>
+                <DropdownMenuItem
+                  onClick={() => console.log("REST API selected")}
+                >
                   REST API
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => console.log('Amazon S3 selected')}>
+                <DropdownMenuItem
+                  onClick={() => console.log("Amazon S3 selected")}
+                >
                   Amazon S3
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => console.log('MySQL selected')}>
+                <DropdownMenuItem onClick={() => console.log("MySQL selected")}>
                   MySQL
                 </DropdownMenuItem>
               </DropdownMenuSubContent>
@@ -263,7 +307,9 @@ export default function DataCatalogue({
             value={selectedBusinessDescription}
             onChange={(e) =>
               setSelectedBusinessDescription(
-                e.target.value === "All Business Descriptions" ? "" : e.target.value
+                e.target.value === "All Business Descriptions"
+                  ? ""
+                  : e.target.value
               )
             }
             className='appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 text-sm text-gray-700 focus:ring-2 focus:ring-[#4A4A7A] focus:border-transparent cursor-pointer'
@@ -301,7 +347,7 @@ export default function DataCatalogue({
       <AdvancedTable
         data={filteredDataCatalogue}
         columns={columns}
-        isLoading={isLoading}
+        // isLoading={isLoading}
         showCheckBox={true}
         options={tableOptions}
         getFormattedValue={getFormattedValue}

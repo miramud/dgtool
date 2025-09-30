@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import {
-  LayoutDashboard,
+  // LayoutDashboard,
   Database,
   BarChart3,
   Users,
@@ -19,7 +19,20 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
-const mainNavItems = [
+interface SubItem {
+  title: string;
+  href: string;
+}
+
+interface NavItem {
+  title: string;
+  href: string;
+  icon: any;
+  hasDropdown?: boolean;
+  subItems?: SubItem[];
+}
+
+const mainNavItems: NavItem[] = [
   {
     title: "Dashboard",
     href: "/dashboard",
@@ -62,25 +75,23 @@ const mainNavItems = [
   },
 ];
 
-const settingsNavItems = [
+const settingsNavItems: NavItem[] = [
   {
     title: "Settings",
     href: "/dashboard/settings",
     icon: Settings,
-    hasDropdown: true,
-    subItems: [],
   },
 ];
 
-const bottomNavItems = [
-  {
-    title: "Help & Support",
-    href: "/dashboard/help",
-    icon: HelpCircle,
-    hasDropdown: true,
-    subItems: [],
-  },
-];
+// const bottomNavItems = [
+//   {
+//     title: "Help & Support",
+//     href: "/dashboard/help",
+//     icon: HelpCircle,
+//     hasDropdown: true,
+//     subItems: [],
+//   },
+// ];
 
 export default function DashboardSidebar() {
   const pathname = usePathname();
@@ -257,30 +268,52 @@ export default function DashboardSidebar() {
 
           return (
             <div key={item.title}>
-              <button
-                onClick={() => toggleExpanded(item.title)}
-                className={cn(
-                  "flex items-center justify-between w-full px-3 py-3 text-sm rounded-lg transition-colors",
-                  isActive
-                    ? "bg-white/20 text-white"
-                    : "text-gray-200 hover:bg-white/10 hover:text-white",
-                  isCollapsed && "justify-center"
-                )}
-                title={isCollapsed ? item.title : undefined}
-              >
-                <div className='flex items-center'>
+              {item.hasDropdown ? (
+                <button
+                  onClick={() => toggleExpanded(item.title)}
+                  className={cn(
+                    "flex items-center justify-between w-full px-3 py-3 text-sm rounded-lg transition-colors",
+                    isActive
+                      ? "bg-white/20 text-white"
+                      : "text-gray-200 hover:bg-white/10 hover:text-white",
+                    isCollapsed && "justify-center"
+                  )}
+                  title={isCollapsed ? item.title : undefined}
+                >
+                  <div className='flex items-center'>
+                    <Icon className={cn("h-5 w-5", !isCollapsed && "mr-3")} />
+                    {!isCollapsed && item.title}
+                  </div>
+                  {!isCollapsed && item.hasDropdown && (
+                    <ChevronDown
+                      className={cn(
+                        "h-4 w-4 transition-transform",
+                        isExpanded ? "rotate-180" : ""
+                      )}
+                    />
+                  )}
+                </button>
+              ) : (
+                <Link
+                  href={item.href}
+                  className={cn(
+                    "flex items-center px-3 py-3 text-sm rounded-lg transition-colors group relative",
+                    isActive
+                      ? "bg-white/20 text-white"
+                      : "text-gray-200 hover:bg-white/10 hover:text-white",
+                    isCollapsed && "justify-center"
+                  )}
+                  title={isCollapsed ? item.title : undefined}
+                >
                   <Icon className={cn("h-5 w-5", !isCollapsed && "mr-3")} />
                   {!isCollapsed && item.title}
-                </div>
-                {!isCollapsed && item.hasDropdown && (
-                  <ChevronDown
-                    className={cn(
-                      "h-4 w-4 transition-transform",
-                      isExpanded ? "rotate-180" : ""
-                    )}
-                  />
-                )}
-              </button>
+                  {isCollapsed && (
+                    <div className='absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50'>
+                      {item.title}
+                    </div>
+                  )}
+                </Link>
+              )}
 
               {/* Settings Sub-items */}
               {!isCollapsed &&

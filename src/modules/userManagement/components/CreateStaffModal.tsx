@@ -1,6 +1,6 @@
 "use client";
-import { useState, useEffect, useMemo } from "react";
-import { useForm, SubmitHandler, useWatch } from "react-hook-form";
+import { useState, useEffect } from "react";
+import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -68,7 +68,7 @@ export default function CreateStaffModal({
   const { updateStaff, isLoading: isUpdating } = useUpdateStaff(
     staff?.id || ""
   );
-  const { getStaff, data: staffData } = useGetStaff(staff?.id || "");
+  const { getStaff } = useGetStaff(staff?.id || "");
   const { getRoles, data: rolesData } = useGetRoles();
 
   // Load roles on component mount
@@ -79,6 +79,7 @@ export default function CreateStaffModal({
         getStaff();
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, staff?.id]);
 
   // Reset form when modal opens/closes
@@ -112,11 +113,12 @@ export default function CreateStaffModal({
         setSelectedRoles([]);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, staff?.id]); // Changed dependency to avoid constant resets
   // Watch form values in real-time to debug
-  const watchedValues = useWatch({
-    control: form.control,
-  });
+  // const watchedValues = useWatch({
+  //   control: form.control,
+  // });
 
   const isLoading = isCreating || isUpdating;
   const availableRoles = rolesData?.results || [];
