@@ -13,4 +13,7 @@ export enum AUTH_API_ROUTES {
   PERMISSIONS = "/auth/permissions",
   STAFFS = "/staffs",
   STAFF_PROFILE = "/staffs/profile",
+  NEW_USER_OTP = "auth/otp/verify",
+
+  NEW_PASSWORD_RESET = "auth/password-reset/confirm",
 }

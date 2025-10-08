@@ -28,7 +28,7 @@ import RolePermissionsConfiguration from "../../../components/shared/RolePermiss
 const createRoleSchema = z.object({
   name: z.string().min(1, "Role name is required"),
   description: z.string().optional(),
-  permissions: z.array(z.string()).optional().nullable,
+  permissions: z.array(z.string()).optional().nullable(),
 });
 
 interface CreateRoleModalProps {

@@ -32,7 +32,10 @@ export default function SignInClient() {
   const onSubmit: SubmitHandler<TSignInFormValues> = async (data) => {
     const response = await signIn(data);
 
-    if (response?.data?.is_mfa_required) {
+    if (response?.data?.force_password_reset) {
+      toast.success("Please verify with MFA to reset your password");
+      router.push(`${AUTH_ROUTES.VERIFY_OTP}?email=${data.email}&fpr=true`);
+    } else if (response?.data?.is_mfa_required) {
       toast.success("Please verify with MFA");
       router.push(`${AUTH_ROUTES.VERIFY_OTP}?email=${data.email}&mfa=true`);
     } else if (response?.data?.access_token) {

@@ -20,6 +20,7 @@ export default function VerifyEmailClient() {
   const email = searchParams.get("email");
   const type = searchParams.get("type");
   const isMfa = searchParams.get("mfa") === "true";
+  const isFpr = searchParams.get("fpr") === "true";
 
   //   const [isSignInLoading, setIsSignInLoading] = useState(false);
 
@@ -44,6 +45,17 @@ export default function VerifyEmailClient() {
     }
 
     if (email && otp) {
+      if (isFpr) {
+        const res = await verifyEmail({
+          email,
+          totp: otp,
+        });
+        if (res?.status === true) {
+          return router.push(
+            `${AUTH_ROUTES.RESET_PASSWORD}?email=${email}&token=${otp}&fpr=true`
+          );
+        }
+      }
       if (type === "RESET_PASSWORD") {
         const res = await verifyEmail({
           email,

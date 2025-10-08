@@ -314,12 +314,14 @@ export default function EnhancedRoleManagement({
       <CreateRoleModal
         open={createModalOpen}
         onOpenChange={setCreateModalOpen}
+        onSuccess={() => getRoles()}
       />
 
       <CreateRoleModal
         open={editModalOpen}
         onOpenChange={setEditModalOpen}
         role={selectedRoleForEdit}
+        onSuccess={() => getRoles()}
       />
 
       {/* Delete Confirmation Modal */}

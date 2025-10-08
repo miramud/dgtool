@@ -115,7 +115,7 @@ export const useGetRole = (roleId: string) => {
     method: "GET",
     isAuth: true,
     showSuccessToast: false,
-    queryKey: ["role", roleId],
+    queryKey: ["roles", roleId],
   });
 
   const getRole = async () => {
@@ -143,7 +143,7 @@ export const useUpdateRole = (roleId: string) => {
     method: "PUT",
     isAuth: true,
     showSuccessToast: true,
-    queryKey: ["role", roleId],
+    queryKey: ["roles", roleId],
   });
 
   const updateRole = async (roleData: UpdateRoleRequest) => {
@@ -171,7 +171,7 @@ export const usePartialUpdateRole = (roleId: string) => {
     method: "PATCH",
     isAuth: true,
     showSuccessToast: true,
-    queryKey: ["role", roleId],
+    queryKey: ["roles", roleId],
   });
 
   const partialUpdateRole = async (roleData: Partial<UpdateRoleRequest>) => {
@@ -198,7 +198,7 @@ export const useDeleteRole = (roleId: string) => {
     method: "DELETE",
     isAuth: true,
     showSuccessToast: true,
-    queryKey: ["role", roleId],
+    queryKey: ["roles", roleId],
   });
 
   const deleteRole = async () => {

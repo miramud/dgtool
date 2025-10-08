@@ -1,5 +1,6 @@
 import axios from "axios";
 import { getSession } from "next-auth/react";
+import { handleSessionExpiry, isSessionExpired } from "./auth-utils";
 
 const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -26,6 +27,12 @@ axiosCallerWithToken.interceptors.request.use(
       token = session?.user?.token ?? null;
     }
 
+    // Check if token is expired before making request
+    if (token && isSessionExpired(token)) {
+      await handleSessionExpiry();
+      return Promise.reject(new Error("Session expired"));
+    }
+
     if (!token && retryCount < 3) {
       retryCount++;
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -34,7 +41,8 @@ axiosCallerWithToken.interceptors.request.use(
 
     if (!token && retryCount >= 3) {
       retryCount = 0;
-      return config;
+      await handleSessionExpiry();
+      return Promise.reject(new Error("No valid token available"));
     }
 
     config.headers.Authorization = `Bearer ${token}`;
@@ -48,10 +56,8 @@ axiosCallerWithToken.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
-      // showToast.success("Login session expired");
-      window.location.href = "/auth/login";
-      localStorage.removeItem("access_token");
-      // window.location.href = "/auth/login";
+      // Handle 401 unauthorized responses (session expired)
+      await handleSessionExpiry();
     }
     return Promise.reject(error);
   }

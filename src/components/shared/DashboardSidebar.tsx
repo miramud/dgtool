@@ -18,6 +18,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useLogout } from "@/hooks/useLogout";
 
 interface SubItem {
   title: string;
@@ -42,8 +43,12 @@ const mainNavItems: NavItem[] = [
     title: "Data Catalogue",
     href: "/dashboard/data-catalogue",
     icon: Database,
-    // hasDropdown: true,
-    // subItems: [],
+    hasDropdown: true,
+    subItems: [
+      { title: "Data Catalogue", href: "/dashboard/data-catalogue" },
+      { title: "Metadata Library", href: "/dashboard/metadata-library" },
+      { title: "Dataset Types", href: "/dashboard/dataset-types" },
+    ],
   },
   {
     title: "Data Quality",
@@ -97,6 +102,7 @@ export default function DashboardSidebar() {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
+  const { logout, isLoggingOut } = useLogout();
 
   const toggleExpanded = (title: string) => {
     setExpandedItems((prev) =>
@@ -119,8 +125,8 @@ export default function DashboardSidebar() {
   return (
     <div
       className={cn(
-        "text-white flex flex-col transition-all duration-300",
-        isCollapsed ? "w-16" : "w-80"
+        "text-white flex flex-col transition-all duration-300 rounded-br-[12px] rounded-tr-[12px]",
+        isCollapsed ? "w-16" : "w-64"
       )}
       style={{ backgroundColor: "#544587" }}
     >
@@ -147,7 +153,7 @@ export default function DashboardSidebar() {
           variant='ghost'
           size='icon'
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className='absolute -right-3 top-1/2 transform -translate-y-1/2 bg-white text-gray-600 hover:bg-gray-100 w-7 h-7 rounded-full'
+          className='absolute -right-3 top-1/2 transform -translate-y-1/2 bg-white text-gray-600 hover:bg-gray-100 w-7 h-7 rounded-[8px] border'
         >
           {isCollapsed ? (
             <ChevronRight className='h-4 w-4' />
@@ -368,17 +374,20 @@ export default function DashboardSidebar() {
         </button>
 
         <button
+          onClick={() => logout()}
+          disabled={isLoggingOut}
           className={cn(
             "flex items-center px-3 py-3 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 rounded-lg transition-colors w-full group relative",
-            isCollapsed && "justify-center"
+            isCollapsed && "justify-center",
+            isLoggingOut && "opacity-50 cursor-not-allowed"
           )}
           title={isCollapsed ? "Log Out" : undefined}
         >
           <LogOut className={cn("h-5 w-5", !isCollapsed && "mr-3")} />
-          {!isCollapsed && "Log Out"}
+          {!isCollapsed && (isLoggingOut ? "Logging Out..." : "Log Out")}
           {isCollapsed && (
             <div className='absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50'>
-              Log Out
+              {isLoggingOut ? "Logging Out..." : "Log Out"}
             </div>
           )}
         </button>

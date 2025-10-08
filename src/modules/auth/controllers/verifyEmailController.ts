@@ -9,7 +9,7 @@ export const useVerifyEmail = () => {
     AxiosError,
     TVerifyEmailFormValues
   >({
-    endpoint: AUTH_API_ROUTES.VERIFY_NEW_USER,
+    endpoint: AUTH_API_ROUTES.NEW_USER_OTP,
     method: "POST",
     isAuth: false,
     showSuccessToast: true,
@@ -22,6 +22,33 @@ export const useVerifyEmail = () => {
 
   return {
     verifyEmail,
+    data,
+    isLoading,
+    isSuccess,
+    isError,
+    error,
+  };
+};
+
+export const useVerifyNewUserEmail = () => {
+  const { callApi, data, isLoading, isSuccess, isError, error } = useApiManager<
+    ISignUpResponse,
+    AxiosError,
+    TVerifyEmailFormValues
+  >({
+    endpoint: AUTH_API_ROUTES.NEW_USER_OTP,
+    method: "POST",
+    isAuth: false,
+    showSuccessToast: true,
+    queryKey: ["user"],
+  });
+
+  const verifyNewUserEmail = async (formData: TVerifyEmailFormValues) => {
+    return await callApi(formData);
+  };
+
+  return {
+    verifyNewUserEmail,
     data,
     isLoading,
     isSuccess,
