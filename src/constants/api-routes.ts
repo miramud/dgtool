@@ -17,3 +17,22 @@ export enum AUTH_API_ROUTES {
 
   NEW_PASSWORD_RESET = "auth/password-reset/confirm",
 }
+
+export enum METADATA_API_ROUTES {
+  TEMPLATES = "/templates",
+}
+
+export enum DATASET_TYPE_API_ROUTES {
+  BASE = "/dataset-types",
+}
+
+export const DATASET_TYPE_ROUTES = {
+  LIST: DATASET_TYPE_API_ROUTES.BASE,
+  CREATE: DATASET_TYPE_API_ROUTES.BASE,
+  GET_BY_ID: (id: string) => `${DATASET_TYPE_API_ROUTES.BASE}/${id}`,
+  UPDATE: (id: string) => `${DATASET_TYPE_API_ROUTES.BASE}/${id}`,
+  PARTIAL_UPDATE: (id: string) => `${DATASET_TYPE_API_ROUTES.BASE}/${id}`,
+  DELETE: (id: string) => `${DATASET_TYPE_API_ROUTES.BASE}/${id}`,
+  ARCHIVE: (id: string) => `${DATASET_TYPE_API_ROUTES.BASE}/${id}/archive`,
+  UNARCHIVE: (id: string) => `${DATASET_TYPE_API_ROUTES.BASE}/${id}/unarchive`,
+};

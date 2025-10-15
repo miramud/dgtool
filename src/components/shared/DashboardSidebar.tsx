@@ -125,7 +125,7 @@ export default function DashboardSidebar() {
   return (
     <div
       className={cn(
-        "text-white flex flex-col transition-all duration-300 rounded-br-[12px] rounded-tr-[12px]",
+        "text-white flex flex-col transition-all duration-300 rounded-br-[12px] rounded-tr-[12px] h-screen overflow-scroll",
         isCollapsed ? "w-16" : "w-64"
       )}
       style={{ backgroundColor: "#544587" }}

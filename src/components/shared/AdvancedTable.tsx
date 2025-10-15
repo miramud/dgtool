@@ -18,7 +18,7 @@ interface TableColumn {
 }
 
 interface TableOption {
-  label: string;
+  label: string | ((item: any) => React.ReactNode);
   permissions?: string[];
   action: (item: any) => void;
 }
@@ -147,7 +147,7 @@ export default function AdvancedTable({
                               key={index}
                               onClick={() => option.action(item)}
                             >
-                              {option.label}
+                              {typeof option.label === 'function' ? option.label(item) : option.label}
                             </DropdownMenuItem>
                           ))}
                         </DropdownMenuContent>

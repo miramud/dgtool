@@ -1,11 +1,9 @@
 "use client";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2, Search } from "lucide-react";
 import AdvancedTable from "../../../components/shared/AdvancedTable";
 import StatusBadge from "../../../components/shared/StatusBadge";
-// import CreateRoleModal from "./CreateRoleModal";
-// import { User } from "../types/user";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -15,12 +13,18 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { MetadataTemplate } from "../types/metadataTemplate";
-import { mockMetadataTemplates } from "../data/mockMetadataTemplates";
+import {
+  MetadataTemplate,
+  MetadataTemplateFilters,
+} from "../types/metadataTemplate";
 import CreateMetadataTemplateModal from "../components/CreateMetadataTemplateModal";
-// import { mockRoles } from "../data/mockRoles";
-// import { Role } from "../types/roles";
-// import { useGetRoles, useDeleteRole } from "../controllers/rolesController";
+import {
+  useGetMetadataTemplates,
+  useDeleteMetadataTemplate,
+  useActivateMetadataTemplate,
+  useDeactivateMetadataTemplate,
+} from "../controllers/metadataTemplateController";
+import { formatDate } from "@/utils/dateFormatter";
 
 // Custom hook for debounced search (mimicking the performance dialog pattern)
 function useDebounce(value: string, delay: number) {
@@ -47,84 +51,72 @@ export default function EnhancedMetaDataLibrary({
   className,
 }: EnhancedMetaDataLibraryProps) {
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedTemplate, setSelectedTemplate] = useState<MetadataTemplate | null>(null);
-  const [selectedTemplates, setSelectedTemplates] = useState<MetadataTemplate[]>([]);
-  const [selectedTemplateForEdit, setSelectedTemplateForEdit] = useState<MetadataTemplate | null>(
-    null
-  );
+  const [selectedTemplate, setSelectedTemplate] =
+    useState<MetadataTemplate | null>(null);
+  const [selectedTemplates, setSelectedTemplates] = useState<
+    MetadataTemplate[]
+  >([]);
+  const [selectedTemplateForEdit, setSelectedTemplateForEdit] =
+    useState<MetadataTemplate | null>(null);
   const [searchValue, setSearchValue] = useState("");
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
-  const [templates, setTemplates] = useState<MetadataTemplate[]>(mockMetadataTemplates);
 
   const debouncedSearchValue = useDebounce(searchValue, 500);
 
   // API hooks
-  //   const {
-  //     getRoles,
-  //     data: rolesData,
-  //     isLoading: isLoadingRoles,
-  //   } = useGetRoles();
+  const filters: MetadataTemplateFilters = useMemo(
+    () => ({
+      search: debouncedSearchValue || undefined,
+      page: currentPage,
+      limit: 15,
+    }),
+    [debouncedSearchValue, currentPage]
+  );
 
-  //   const { deleteRole } = useDeleteRole(selectedUser?.id || "");
+  const {
+    data: templatesData,
+    isLoading,
+    error,
+    isFetching,
+  } = useGetMetadataTemplates(filters);
+  const deleteTemplateMutation = useDeleteMetadataTemplate(
+    selectedTemplate?.id || ""
+  );
+  const activateTemplateMutation = useActivateMetadataTemplate(
+    selectedTemplate?.id || ""
+  );
+  const deactivateTemplateMutation = useDeactivateMetadataTemplate(
+    selectedTemplate?.id || ""
+  );
 
-  // Load roles and permissions on component mount
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        // Load initial data if needed
-      } catch (error) {
-        console.error("Failed to load templates:", error);
-      }
-    };
-
-    loadData();
+  // Handle template creation success
+  const handleTemplateSuccess = useCallback(() => {
+    setSelectedTemplateForEdit(null);
+    // The API will automatically refetch data due to query invalidation
   }, []);
 
-  // Update roles when API data changes
-  // Handle template creation success
-  const handleTemplateSuccess = (template: MetadataTemplate) => {
-    if (selectedTemplateForEdit) {
-      // Edit mode
-      setTemplates(prev => prev.map(t => t.id === template.id ? template : t));
-    } else {
-      // Create mode
-      setTemplates(prev => [...prev, template]);
+  // Handle modal open/close
+  const handleModalOpenChange = useCallback((open: boolean) => {
+    if (!open) {
+      setCreateModalOpen(false);
+      setEditModalOpen(false);
+      setSelectedTemplateForEdit(null);
     }
-    setSelectedTemplateForEdit(null);
-  };
+  }, []);
 
-  // Filter templates based on search
-  const filteredTemplates = useMemo(() => {
-    let filteredResults = [...templates];
+  // console.log({ templatesData });
 
-    // Apply search filter
-    if (debouncedSearchValue) {
-      filteredResults = filteredResults.filter(
-        (template) =>
-          template.name
-            .toLowerCase()
-            .includes(debouncedSearchValue.toLowerCase()) ||
-          template.datasetType
-            .toLowerCase()
-            .includes(debouncedSearchValue.toLowerCase()) ||
-          template.createdBy
-            .toLowerCase()
-            .includes(debouncedSearchValue.toLowerCase()) ||
-          template.description
-            .toLowerCase()
-            .includes(debouncedSearchValue.toLowerCase())
-      );
-    }
-
-    return filteredResults;
-  }, [debouncedSearchValue, templates]);
+  // Get the templates array from API response
+  const templates = templatesData?.data?.results || [];
+  const totalTemplates = templatesData?.data?.paginator?.count || 0;
+  const totalPages = templatesData?.data?.paginator?.total_pages || 1;
 
   // Table columns configuration
   const columns = [
     { key: "name", header: "Template Name", width: "20%" },
-    { key: "datasetType", header: "Dataset Type", width: "15%" },
+    { key: "category", header: "Category", width: "15%" },
     { key: "fieldsNumber", header: "Fields Number", width: "10%" },
     { key: "createdBy", header: "Created By", width: "15%" },
     { key: "lastModified", header: "Last Modified", width: "20%" },
@@ -135,43 +127,55 @@ export default function EnhancedMetaDataLibrary({
   const getFormattedValue = (template: MetadataTemplate, columnKey: string) => {
     switch (columnKey) {
       case "name":
-        return <span className='text-gray-900'>{template.name}</span>;
+        return (
+          <div>
+            <div className='font-medium text-gray-900'>{template.name}</div>
+          </div>
+        );
 
-      case "datasetType":
+      case "category":
         return (
           <span className='text-gray-900'>
-            {template.datasetType}
+            {template.category || template.dataset_type.name || "Uncategorized"}
           </span>
         );
+
       case "fieldsNumber":
         return (
-          <span className='text-gray-900'>{template.fieldsNumber}</span>
+          <span className='text-gray-900'>
+            {template.fields_count || template.fields?.length || 0}
+          </span>
         );
 
       case "createdBy":
         return (
-          <span className='text-gray-900'>{template.createdBy}</span>
+          <span className='text-gray-900'>
+            {template.created_by?.first_name || "Unknown"}{" "}
+            {template.created_by?.last_name || "Unknown"}
+          </span>
         );
 
       case "lastModified":
-        return (
-          <span className='text-gray-900'>{template.lastModified}</span>
-        );
+        const lastModified = formatDate(template.updated_datetime) || "Unknown";
+        return <span className='text-gray-900'>{lastModified}</span>;
 
       case "status":
+        const isActive =
+          template.is_active !== undefined
+            ? template.is_active
+            : template.status === "active";
         return (
           <div className='flex items-center gap-2'>
             <div
               className={cn(
                 "w-2 h-2 rounded-full",
-                template.status === "active"
-                  ? "bg-green-400"
-                  : template.status === "inactive"
-                  ? "bg-red-400"
-                  : "bg-yellow-400"
+                isActive ? "bg-green-400" : "bg-red-400"
               )}
             ></div>
-            <StatusBadge status={template.status === "active" ? "Active" : "Inactive"} variant='status' />
+            <StatusBadge
+              status={isActive ? "Active" : "Inactive"}
+              variant='status'
+            />
           </div>
         );
       default:
@@ -189,6 +193,28 @@ export default function EnhancedMetaDataLibrary({
       },
     },
     {
+      label: (template: MetadataTemplate) => {
+        const isActive =
+          template.is_active !== undefined
+            ? template.is_active
+            : template.status === "active";
+        return isActive ? "Deactivate" : "Activate";
+      },
+      action: async (template: MetadataTemplate) => {
+        const isActive =
+          template.is_active !== undefined
+            ? template.is_active
+            : template.status === "active";
+        setSelectedTemplate(template);
+        if (isActive) {
+          await deactivateTemplateMutation.deactivateTemplate();
+        } else {
+          await activateTemplateMutation.activateTemplate();
+        }
+        setSelectedTemplate(null);
+      },
+    },
+    {
       label: "Delete Template",
       action: (template: MetadataTemplate) => {
         setSelectedTemplate(template);
@@ -199,7 +225,7 @@ export default function EnhancedMetaDataLibrary({
 
   // Handle bulk actions
   const handleBulkDelete = () => {
-    console.log("Bulk delete:", selectedTemplates);
+    // console.log("Bulk delete:", selectedTemplates);
     // Implement bulk delete logic
   };
 
@@ -208,7 +234,7 @@ export default function EnhancedMetaDataLibrary({
     if (!selectedTemplate?.id) return;
 
     try {
-      setTemplates(prev => prev.filter(t => t.id !== selectedTemplate.id));
+      await deleteTemplateMutation.deleteTemplate();
       setDeleteModalOpen(false);
       setSelectedTemplate(null);
     } catch (error) {
@@ -218,8 +244,8 @@ export default function EnhancedMetaDataLibrary({
 
   // Pagination info
   const startItem = (currentPage - 1) * 15 + 1;
-  const endItem = Math.min(currentPage * 15, filteredTemplates.length);
-  const totalPages = Math.ceil(filteredTemplates.length / 15);
+  const endItem = Math.min(currentPage * 15, totalTemplates);
+  // const itemsPerPage = 15;
 
   return (
     <div className={cn("space-y-6", className)}>
@@ -278,19 +304,35 @@ export default function EnhancedMetaDataLibrary({
       </div>
 
       {/* Advanced Table */}
-      <AdvancedTable
-        data={filteredTemplates}
-        columns={columns}
-        showCheckBox={true}
-        options={tableOptions}
-        getFormattedValue={getFormattedValue}
-        onRowSelect={setSelectedTemplates}
-      />
+      {error ? (
+        <div className='flex items-center justify-center py-8'>
+          <div className='text-red-500'>
+            Failed to load dataset types. Please try again.
+          </div>
+        </div>
+      ) : (
+        <div className='relative'>
+          {isFetching && !isLoading && (
+            <div className='absolute inset-0 bg-white/80 flex items-center justify-center py-2 z-10'>
+              <div className='text-sm text-gray-500'>Refreshing...</div>
+            </div>
+          )}
+          <AdvancedTable
+            data={templates}
+            columns={columns}
+            showCheckBox={true}
+            options={tableOptions}
+            getFormattedValue={getFormattedValue}
+            onRowSelect={setSelectedTemplates}
+            isLoading={isLoading}
+          />
+        </div>
+      )}
 
       {/* Pagination */}
       <div className='flex items-center justify-between'>
         <p className='text-sm text-gray-700'>
-          {startItem} - {endItem} of {filteredTemplates.length} templates
+          {startItem} - {endItem} of {totalTemplates} templates
         </p>
         <div className='flex items-center space-x-2'>
           <Button
@@ -318,18 +360,14 @@ export default function EnhancedMetaDataLibrary({
       </div>
 
       {/* Create/Edit Template Modal */}
-      <CreateMetadataTemplateModal
-        open={createModalOpen || editModalOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            setCreateModalOpen(false);
-            setEditModalOpen(false);
-            setSelectedTemplateForEdit(null);
-          }
-        }}
-        template={selectedTemplateForEdit || undefined}
-        onSuccess={handleTemplateSuccess}
-      />
+      {(createModalOpen || editModalOpen) && (
+        <CreateMetadataTemplateModal
+          open={createModalOpen || editModalOpen}
+          onOpenChange={handleModalOpenChange}
+          template={selectedTemplateForEdit || undefined}
+          onSuccess={handleTemplateSuccess}
+        />
+      )}
 
       {/* Delete Confirmation Modal */}
       <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
