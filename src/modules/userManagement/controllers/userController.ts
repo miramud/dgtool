@@ -3,6 +3,7 @@ import useApiManager from "@/constants/controllers/mainController";
 import { useQuery } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import { User, UserFormData } from "../types/user";
+import { IUser } from "@/modules/auth/lib/types";
 
 export interface UsersResponse {
   users: User[];
@@ -107,5 +108,34 @@ export const useGetUsers = (page = 1, limit = 10, search = "") => {
       } as UsersResponse;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+
+export const useUserProfile = () => {
+  return useQuery({
+    queryKey: ["user-profile"],
+    queryFn: async () => {
+      const token = typeof window !== 'undefined' ? localStorage.getItem("access_token") : null;
+      if (!token) {
+        throw new Error("No access token found");
+      }
+      
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}${USER_API_ROUTES.GET_USER_PROFILE}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch profile: ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+      return result.data as IUser;
+    },
+    enabled: typeof window !== 'undefined' && !!localStorage.getItem("access_token"),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1,
   });
 };

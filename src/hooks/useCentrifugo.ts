@@ -6,6 +6,9 @@ interface UploadProgress {
   percentage: number;
   status: 'preparing' | 'uploading' | 'processing' | 'completed' | 'error';
   message?: string;
+  error_message?: string | null;
+  current_row?: number;
+  total_rows?: number;
 }
 
 interface DatasetProcessedData {
@@ -17,6 +20,11 @@ interface DatasetProcessedData {
   fields_detected?: number;
   status: string;
   type: string;
+  error_summary?: Array<{
+    error_message: string;
+    count: number;
+    rows: number[];
+  }>;
   [key: string]: any;
 }
 
@@ -31,9 +39,10 @@ const getConnectionToken = async () => {
   try {
     // Make request directly to the proxy path
     const response = await axiosCallerWithToken.get('/modules/websockets/token');
-    return response.data.data?.token;
+    const token = response.data.data?.token;
+    return token;
   } catch (error) {
-    console.error('Error getting connection token:', error);
+    console.error('[Centrifugo] Error getting connection token:', error);
     throw error;
   }
 };
@@ -44,9 +53,10 @@ const getSubscriptionToken = async (channel: string) => {
     const response = await axiosCallerWithToken.post('/modules/websockets/channels/token', {
       channel: channel,
     });
-    return response.data.data.token;
+    const token = response.data.data.token;
+    return token;
   } catch (error) {
-    console.error('Error getting subscription token:', error);
+    console.error(`[Centrifugo] Error getting subscription token for ${channel}:`, error);
     throw error;
   }
 };
@@ -83,7 +93,7 @@ export const useCentrifugo = ({ url, onProgress, onDatasetProcessed }: UseCentri
       });
 
       centrifuge.on('error', (ctx) => {
-        console.error('Centrifugo connection error:', ctx.error?.message);
+        console.error('[Centrifugo] Connection error:', ctx.error?.message);
         setError(ctx.error?.message || 'Connection error');
         setIsConnected(false);
       });
@@ -93,14 +103,14 @@ export const useCentrifugo = ({ url, onProgress, onDatasetProcessed }: UseCentri
       centrifugeRef.current = centrifuge;
       
     } catch (err) {
-      console.error('Failed to initialize Centrifugo:', err);
+      console.error('[Centrifugo] Failed to initialize:', err);
       setError(`Failed to initialize connection: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   }, [url]);
 
   const subscribeToChannel = useCallback((channel: string) => {
     if (!centrifugeRef.current) {
-      console.warn('Centrifugo client not initialized');
+      console.warn('[Centrifugo] Client not initialized, cannot subscribe to channel:', channel);
       return null;
     }
 
@@ -130,7 +140,12 @@ export const useCentrifugo = ({ url, onProgress, onDatasetProcessed }: UseCentri
             const progressData: UploadProgress = {
               percentage: ctx.data.progress_percentage || 0,
               status: ctx.data.status === 'processing' ? 'processing' : 'uploading',
-              message: `Processing row ${ctx.data.current_row} of ${ctx.data.total_rows}`
+              message: ctx.data.error_message 
+                ? `Error on row ${ctx.data.current_row}: ${ctx.data.error_message}` 
+                : `Processing row ${ctx.data.current_row} of ${ctx.data.total_rows}`,
+              error_message: ctx.data.error_message,
+              current_row: ctx.data.current_row,
+              total_rows: ctx.data.total_rows
             };
             onProgress(progressData);
           }
@@ -147,7 +162,7 @@ export const useCentrifugo = ({ url, onProgress, onDatasetProcessed }: UseCentri
       });
 
       sub.on('error', (ctx) => {
-        console.error('Subscription error:', ctx.error?.message);
+        console.error(`[Centrifugo] Subscription error for ${channel}:`, ctx.error?.message);
         setError(`Subscription error for ${channel}: ${ctx.error?.message || 'Unknown error'}`);
       });
 
@@ -155,7 +170,7 @@ export const useCentrifugo = ({ url, onProgress, onDatasetProcessed }: UseCentri
       sub.subscribe();
       return sub;
     } catch (err) {
-      console.error('Failed to subscribe to channel:', channel, err);
+      console.error(`[Centrifugo] Failed to subscribe to channel ${channel}:`, err);
       setError(`Failed to subscribe to ${channel}: ${err instanceof Error ? err.message : 'Unknown error'}`);
       return null;
     }
@@ -167,7 +182,7 @@ export const useCentrifugo = ({ url, onProgress, onDatasetProcessed }: UseCentri
         centrifugeRef.current.disconnect();
         centrifugeRef.current = null;
       } catch (err) {
-        console.error('Error during disconnect:', err);
+        console.error('[Centrifugo] Error during disconnect:', err);
       }
     }
     setIsConnected(false);

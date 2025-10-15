@@ -4,4 +4,5 @@ export enum USER_API_ROUTES {
     UPDATE_USER = "/users/update/",
     DELETE_USER = "/users/delete/",
     GET_USER_ROLES = "/users/roles/",
+    GET_USER_PROFILE = "/users/profile/",
 }

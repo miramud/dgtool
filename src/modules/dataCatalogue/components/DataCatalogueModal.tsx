@@ -37,8 +37,18 @@ export default function DataCatalogueModal({
   const [processingResults, setProcessingResults] = useState<{
     totalRows?: number;
     rowsCleaned?: number;
+    errorSummary?: Array<{
+      error_message: string;
+      count: number;
+      rows: number[];
+    }>;
   }>({});
+  const [processedErrors, setProcessedErrors] = useState<Array<{
+    row: number;
+    error_message: string;
+  }>>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const processingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const form = useForm<DataCatalogueFormData>({
     resolver: zodResolver(createDataCatalogueSchema),
@@ -71,25 +81,60 @@ export default function DataCatalogueModal({
       setUploadProgress(progress.percentage);
       setUploadStatus(progress.status);
       setUploadMessage(progress.message || '');
+      
+      // Collect errors during processing
+      if (progress.error_message && progress.current_row !== undefined) {
+        setProcessedErrors(prev => {
+          // Check if this error for this row already exists
+          const exists = prev.some(err => err.row === progress.current_row && err.error_message === progress.error_message);
+          if (!exists) {
+            return [...prev, {
+              row: progress.current_row!,
+              error_message: progress.error_message!
+            }];
+          }
+          return prev;
+        });
+      }
     },
     onDatasetProcessed: async (data: any) => {
       // Handle dataset processing completion
       console.log('Processing completed with data:', data);
+      
+      // Clear the timeout since we received completion
+      if (processingTimeoutRef.current) {
+        clearTimeout(processingTimeoutRef.current);
+        processingTimeoutRef.current = null;
+      }
       
       try {
         // For now, set what we have from Centrifugo
         setProcessingResults({
           totalRows: data.total_rows,
           rowsCleaned: data.rows_cleaned,
+          errorSummary: data.error_summary,
         });
         
-        // TODO: If we need fields count, we could fetch dataset details here
-        // using data.dataset_id to get more detailed information
+        // Check if processing completed with errors or successfully
+        const hasErrors = processedErrors.length > 0 || (data.error_summary && data.error_summary.length > 0);
         
-        setUploadStatus('completed');
+        if (data.status === 'failed' || data.status === 'error') {
+          setUploadStatus('error');
+          setUploadMessage('Dataset processing failed. Please review errors and try again.');
+        } else {
+          setUploadStatus('completed');
+          if (hasErrors) {
+            setUploadMessage(`Dataset processed with ${processedErrors.length > 0 ? processedErrors.length : data.error_summary?.length || 0} issues that need attention.`);
+          } else {
+            setUploadMessage('Dataset processed successfully without issues.');
+          }
+        }
+        
         setUploadProgress(100);
       } catch (error) {
         console.error('Error processing dataset completion:', error);
+        setUploadStatus('error');
+        setUploadMessage('An error occurred while processing completion data.');
       }
     }
   });
@@ -368,6 +413,7 @@ export default function DataCatalogueModal({
       // Initialize upload progress
       setUploadStatus('preparing');
       setUploadProgress(0);
+      setProcessedErrors([]); // Clear any previous errors
       
       // Connect to Centrifugo
       connect();
@@ -392,6 +438,18 @@ export default function DataCatalogueModal({
                         (response as any)?.reference;
       if (datasetRef) {
         subscribeToChannel(`dataset:${datasetRef}`);
+        
+        // Set a timeout for processing completion (5 minutes)
+        processingTimeoutRef.current = setTimeout(() => {
+          console.warn('Processing timeout reached, marking as completed with potential issues');
+          setUploadStatus('completed');
+          setUploadProgress(100);
+          setUploadMessage(processedErrors.length > 0 
+            ? `Processing completed with ${processedErrors.length} known issues. Some operations may have timed out.`
+            : 'Processing completed. Some operations may have timed out.'
+          );
+        }, 5 * 60 * 1000); // 5 minutes timeout
+        
       } else {
         console.warn('No dataset reference found in response:', response);
       }
@@ -422,6 +480,7 @@ export default function DataCatalogueModal({
     setUploadStatus('idle');
     setUploadMessage('');
     setProcessingResults({});
+    setProcessedErrors([]);
     // Reset form to initial state
     form.reset({
       name: "",
@@ -435,6 +494,11 @@ export default function DataCatalogueModal({
     });
     // Disconnect from WebSocket
     disconnect();
+    // Clear processing timeout
+    if (processingTimeoutRef.current) {
+      clearTimeout(processingTimeoutRef.current);
+      processingTimeoutRef.current = null;
+    }
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -451,6 +515,7 @@ export default function DataCatalogueModal({
     setUploadStatus('idle');
     setUploadMessage('');
     setProcessingResults({});
+    setProcessedErrors([]);
     // Reset form to initial state
     form.reset({
       name: "",
@@ -464,6 +529,11 @@ export default function DataCatalogueModal({
     });
     // Disconnect from WebSocket
     disconnect();
+    // Clear processing timeout
+    if (processingTimeoutRef.current) {
+      clearTimeout(processingTimeoutRef.current);
+      processingTimeoutRef.current = null;
+    }
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -480,9 +550,21 @@ export default function DataCatalogueModal({
         open={open && !showSuccessModal && !showCancelModal}
         onOpenChange={uploadStatus === 'idle' ? handleCancel : () => {}}
         steps={steps}
-        onComplete={handleComplete}
-        finalButtonLabel={uploadStatus === 'idle' ? "Save Dataset" : "Processing..."}
-        isLoading={isCreatingDataset || uploadStatus !== 'idle'}
+        onComplete={uploadStatus === 'error' ? () => {
+          // Reset error state and retry
+          setUploadStatus('idle');
+          setUploadMessage('');
+          setUploadProgress(0);
+          setProcessedErrors([]);
+          handleComplete();
+        } : handleComplete}
+        finalButtonLabel={
+          uploadStatus === 'idle' ? "Save Dataset" : 
+          uploadStatus === 'error' ? "Retry Upload" :
+          uploadStatus === 'completed' ? "Dataset Saved" :
+          "Processing..."
+        }
+        isLoading={isCreatingDataset || (uploadStatus !== 'idle' && uploadStatus !== 'error' && uploadStatus !== 'completed')}
         hideStepIndicator={isEdit}
         currentStep={currentStep}
         onStepChange={setCurrentStep}
@@ -513,7 +595,7 @@ export default function DataCatalogueModal({
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between">
                         <div>
-                          <h3 className="text-gray-500 text-sm font-medium mb-2">Records detected</h3>
+                          <h3 className="text-gray-500 text-sm font-medium mb-2">Records Detected</h3>
                           <p className="text-4xl font-bold text-gray-900">{processingResults.totalRows ?? '--'}</p>
                         </div>
                         <div className="text-gray-400">
@@ -529,18 +611,68 @@ export default function DataCatalogueModal({
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between">
                         <div>
-                          <h3 className="text-gray-500 text-sm font-medium mb-2">Fields detected</h3>
+                          <h3 className="text-gray-500 text-sm font-medium mb-2">Records Cleaned</h3>
                           <p className="text-4xl font-bold text-gray-900">{processingResults.rowsCleaned ?? '--'}</p>
                         </div>
                         <div className="text-gray-400">
                           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6h.01M12 12h.01M12 18h.01" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
                 </div>
+
+                {/* Error Summary Section */}
+                {(processedErrors.length > 0 || processingResults.errorSummary) && (
+                  <div className="mb-8">
+                    <Card>
+                      <CardContent className="p-6">
+                        <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                          <svg className="w-5 h-5 text-orange-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                          Processing Issues Summary
+                        </h3>
+                        
+                        {processingResults.errorSummary && processingResults.errorSummary.length > 0 ? (
+                          <div className="space-y-3">
+                            {processingResults.errorSummary.map((errorGroup, index) => (
+                              <div key={index} className="border border-orange-200 rounded-lg p-4 bg-orange-50">
+                                <div className="flex items-start justify-between mb-2">
+                                  <h4 className="font-medium text-orange-900">{errorGroup.error_message}</h4>
+                                  <span className="text-sm bg-orange-200 text-orange-800 px-2 py-1 rounded-full">
+                                    {errorGroup.count} occurrences
+                                  </span>
+                                </div>
+                                <p className="text-sm text-orange-700">
+                                  Affected rows: {errorGroup.rows.slice(0, 10).join(', ')}
+                                  {errorGroup.rows.length > 10 && ` and ${errorGroup.rows.length - 10} more...`}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="space-y-2 max-h-40 overflow-y-auto">
+                            {processedErrors.map((error, index) => (
+                              <div key={index} className="text-sm text-orange-700 bg-orange-50 p-2 rounded border border-orange-200">
+                                <span className="font-medium">Row {error.row}:</span> {error.error_message}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        
+                        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                          <p className="text-sm text-blue-800">
+                            <strong>Note:</strong> These issues were automatically flagged during processing. 
+                            You can review and fix them in the Data Quality tab of your dataset.
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
 
                 <Button 
                   onClick={handleSuccessClose}
@@ -572,9 +704,30 @@ export default function DataCatalogueModal({
                   </h2>
                 </div>
 
-                <p className="text-[16px] text-gray-600 mb-6">
-                  {uploadMessage || 'Please wait while we process your dataset.'}
-                </p>
+                <div className="mb-6">
+                  <p className="text-[16px] text-gray-600 mb-2">
+                    {uploadMessage || 'Please wait while we process your dataset.'}
+                  </p>
+                  {processedErrors.length > 0 && (
+                    <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                      <p className="text-sm font-medium text-orange-800 mb-2">
+                        Processing Issues ({processedErrors.length})
+                      </p>
+                      <div className="max-h-32 overflow-y-auto space-y-1">
+                        {processedErrors.slice(-5).map((error, index) => (
+                          <p key={index} className="text-xs text-orange-700">
+                            Row {error.row}: {error.error_message}
+                          </p>
+                        ))}
+                        {processedErrors.length > 5 && (
+                          <p className="text-xs text-orange-600 italic">
+                            ...and {processedErrors.length - 5} more issues
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
 
                 <div className="mb-8">
                   <div className="flex justify-between items-center mb-2">

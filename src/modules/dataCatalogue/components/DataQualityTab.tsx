@@ -1,165 +1,178 @@
 "use client";
 
 import AdvancedTable from "@/components/shared/AdvancedTable";
+import { useGetDatasetCleanupSession, Inconsistency } from "../controllers/dataCatalogueController";
 
 interface DataQualityTabProps {
   dataset: any;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export default function DataQualityTab({ dataset }: DataQualityTabProps) {
+  const { data: cleanupSession, isLoading } = useGetDatasetCleanupSession(dataset?.id);
 
-  // Data quality profiling table data
-  const profilingData = [
-    {
-      id: 1,
-      field: "Well_ID",
-      dataType: "String",
-      nullCount: 0,
-      uniqueValues: 125,
-      minLength: 8,
-      maxLength: 12,
-      pattern: "WL-[A-Z]{2}-[0-9]{3}"
-    },
-    {
-      id: 2,
-      field: "Production_Date",
-      dataType: "Date",
-      nullCount: 2,
-      uniqueValues: 365,
-      minValue: "2024-01-01",
-      maxValue: "2024-12-31",
-      pattern: "YYYY-MM-DD"
-    },
-    {
-      id: 3,
-      field: "Oil_Production_BBL",
-      dataType: "Float",
-      nullCount: 5,
-      uniqueValues: 890,
-      minValue: 0,
-      maxValue: 2500.75,
-      pattern: "Numeric"
-    },
-    {
-      id: 4,
-      field: "Gas_Production_MCF",
-      dataType: "Float",
-      nullCount: 3,
-      uniqueValues: 745,
-      minValue: 0,
-      maxValue: 5000.25,
-      pattern: "Numeric"
-    },
-    {
-      id: 5,
-      field: "Water_Cut_Percentage",
-      dataType: "Float",
-      nullCount: 1,
-      uniqueValues: 256,
-      minValue: 0.1,
-      maxValue: 89.5,
-      pattern: "Percentage"
-    }
-  ];
+  const inconsistenciesData = cleanupSession?.inconsistencies || [];
 
-  // Table columns configuration
+  // Table columns configuration for inconsistencies
   const columns = [
-    { key: "field", header: "Field Name" },
-    { key: "dataType", header: "Data Type" },
-    { key: "nullCount", header: "Null Count" },
-    { key: "uniqueValues", header: "Unique Values" },
-    { key: "range", header: "Min/Max" },
-    { key: "pattern", header: "Pattern/Format" },
+    { key: "row_number", header: "Row" },
+    { key: "field_name", header: "Field Name" },
+    { key: "inconsistency_type", header: "Issue Type" },
+    { key: "severity", header: "Severity" },
+    { key: "original_value", header: "Original Value" },
+    { key: "error_message", header: "Error Message" },
+    { key: "action_taken", header: "Action Taken" },
   ];
 
-  // Format table cell data
-  const getFormattedValue = (item: any, columnKey: string) => {
+  // Format table cell data for inconsistencies
+  const getFormattedValue = (item: Inconsistency, columnKey: string) => {
     switch (columnKey) {
-      case "field":
-        return <span className="font-medium text-gray-900">{item.field}</span>;
-      case "dataType":
-        return <span className="text-gray-700">{item.dataType}</span>;
-      case "nullCount":
+      case "row_number":
+        return <span className="font-medium text-gray-900">{item.row_number}</span>;
+      case "field_name":
+        return <span className="font-medium text-gray-900">{item.field_name}</span>;
+      case "inconsistency_type":
         return (
-          <span className={`${item.nullCount > 0 ? 'text-red-600' : 'text-green-600'}`}>
-            {item.nullCount}
+          <span className="px-2 py-1 text-xs rounded-md bg-blue-100 text-blue-800">
+            {item.inconsistency_type.replace(/_/g, ' ')}
           </span>
         );
-      case "uniqueValues":
-        return <span className="text-gray-700">{item.uniqueValues}</span>;
-      case "range":
-        if (item.minValue !== undefined && item.maxValue !== undefined) {
-          return (
-            <span className="text-gray-700 text-sm">
-              {item.minValue} - {item.maxValue}
-            </span>
-          );
-        }
-        if (item.minLength !== undefined && item.maxLength !== undefined) {
-          return (
-            <span className="text-gray-700 text-sm">
-              {item.minLength} - {item.maxLength} chars
-            </span>
-          );
-        }
-        return <span className="text-gray-500">-</span>;
-      case "pattern":
-        return <span className="text-gray-700 font-mono text-sm">{item.pattern}</span>;
+      case "severity":
+        const severityColors = {
+          HIGH: "bg-red-100 text-red-800",
+          MEDIUM: "bg-yellow-100 text-yellow-800",
+          LOW: "bg-green-100 text-green-800"
+        };
+        return (
+          <span className={`px-2 py-1 text-xs rounded-md ${severityColors[item.severity as keyof typeof severityColors] || 'bg-gray-100 text-gray-800'}`}>
+            {item.severity}
+          </span>
+        );
+      case "original_value":
+        return (
+          <span className="text-gray-700 font-mono text-sm max-w-xs truncate block" title={item.original_value}>
+            {item.original_value || 'N/A'}
+          </span>
+        );
+      case "error_message":
+        return (
+          <span className="text-gray-600 text-sm max-w-md truncate block" title={item.error_message}>
+            {item.error_message}
+          </span>
+        );
+      case "action_taken":
+        const actionColors = {
+          MANUAL_REVIEW_REQUIRED: "bg-orange-100 text-orange-800",
+          TYPE_CONVERTED: "bg-blue-100 text-blue-800",
+          CORRECTED: "bg-green-100 text-green-800",
+          REJECTED: "bg-red-100 text-red-800"
+        };
+        return (
+          <span className={`px-2 py-1 text-xs rounded-md ${actionColors[item.action_taken as keyof typeof actionColors] || 'bg-gray-100 text-gray-800'}`}>
+            {item.action_taken.replace(/_/g, ' ')}
+          </span>
+        );
       default:
         return null;
     }
   };
+
+
+  const formatStatusDisplay = (status: string) => {
+    switch (status) {
+      case "IN_PROGRESS":
+        return "In Progress";
+      case "COMPLETED":
+        return "Completed";
+      case "FAILED":
+        return "Failed";
+      default:
+        return status;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="p-4 space-y-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-white p-6 border border-gray-200 rounded-lg animate-pulse">
+              <div className="h-4 bg-gray-200 rounded mb-2"></div>
+              <div className="h-8 bg-gray-200 rounded"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 space-y-8">
       {/* Quality Metrics Section */}
       <div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Completeness */}
+          {/* Success Rate */}
           <div className="bg-white p-6 border border-gray-200 rounded-lg">
-            <h4 className="text-sm font-medium text-gray-900 mb-2">Completeness:</h4>
-            <div className="text-4xl font-bold text-gray-900">98%</div>
+            <h4 className="text-sm font-medium text-gray-900 mb-2">Success Rate:</h4>
+            <div className="text-4xl font-bold text-gray-900">
+              {cleanupSession?.success_rate ? `${Math.round(cleanupSession.success_rate)}%` : "N/A"}
+            </div>
           </div>
 
-          {/* Outlier Count */}
+          {/* Total Inconsistencies */}
           <div className="bg-white p-6 border border-gray-200 rounded-lg">
-            <h4 className="text-sm font-medium text-gray-900 mb-2">Outlier Count:</h4>
-            <div className="text-4xl font-bold text-gray-900">35</div>
-            <div className="text-sm text-gray-600 mt-1">values flagged ↓</div>
+            <h4 className="text-sm font-medium text-gray-900 mb-2">Total Inconsistencies:</h4>
+            <div className="text-4xl font-bold text-gray-900">
+              {cleanupSession?.total_inconsistencies || 0}
+            </div>
+            <div className="text-sm text-gray-600 mt-1">issues detected</div>
           </div>
 
-          {/* Consistency, Accuracy, Recent Anomalies grouped together */}
+          {/* Processing Status and Summary */}
           <div className="bg-white p-6 border border-gray-200 rounded-lg">
             <div className="space-y-4">
-              {/* Consistency */}
+              {/* Processing Status */}
               <div>
-                <h4 className="text-sm font-bold text-gray-900 mb-1">Consistency:</h4>
-                <div className="text-gray-600 text-sm">Pass (validation vs reference tables)</div>
+                <h4 className="text-sm font-bold text-gray-900 mb-1">Status:</h4>
+                <div className="text-gray-600 text-sm">
+                  {cleanupSession?.status ? formatStatusDisplay(cleanupSession.status) : "Unknown"}
+                </div>
               </div>
 
-              {/* Accuracy */}
+              {/* Rows Processed */}
               <div>
-                <h4 className="text-sm font-bold text-gray-900 mb-1">Accuracy:</h4>
-                <div className="text-gray-600 text-sm">Cross-verified with historian logs</div>
+                <h4 className="text-sm font-bold text-gray-900 mb-1">Rows Processed:</h4>
+                <div className="text-gray-600 text-sm">
+                  {cleanupSession?.total_rows_processed?.toLocaleString() || 0} total
+                </div>
               </div>
 
-              {/* Recent Anomalies */}
+              {/* Rows Cleaned vs Rejected */}
               <div>
-                <h4 className="text-sm font-bold text-gray-900 mb-1">Recent Anomalies:</h4>
-                <div className="text-gray-600 text-sm">None detected in last 30 days</div>
+                <h4 className="text-sm font-bold text-gray-900 mb-1">Cleaned/Rejected:</h4>
+                <div className="text-gray-600 text-sm">
+                  {cleanupSession?.total_rows_cleaned?.toLocaleString() || 0} cleaned, {cleanupSession?.total_rows_rejected?.toLocaleString() || 0} rejected
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Data Profiling Table Section */}
+      {/* Data Quality Issues Table Section */}
       <div>
+        <div className="mb-4">
+          <h3 className="text-lg font-medium text-gray-900">Data Quality Issues</h3>
+          <p className="text-sm text-gray-600">
+            {inconsistenciesData.length > 0 
+              ? `Found ${inconsistenciesData.length} inconsistencies that require attention`
+              : "No data quality issues found"
+            }
+          </p>
+        </div>
         <AdvancedTable
-          data={profilingData}
+          data={inconsistenciesData}
           columns={columns}
-          isLoading={false}
+          isLoading={isLoading}
           showCheckBox={false}
           getFormattedValue={getFormattedValue}
         />

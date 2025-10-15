@@ -186,3 +186,75 @@ export const useGetMetadataTemplates = (datasetTypeId?: string) => {
         retry: 1,
     });
 };
+
+export interface Inconsistency {
+    id: string;
+    cleanup_session_reference: string;
+    created_datetime: string;
+    updated_datetime: string;
+    row_number: number;
+    column_name: string;
+    field_name: string;
+    inconsistency_type: string;
+    severity: string;
+    original_value: string;
+    cleaned_value: string | null;
+    expected_type: string;
+    error_message: string;
+    action_taken: string;
+    is_resolved: boolean;
+    validation_rule: string;
+    additional_context: string | null;
+    cleanup_session: string;
+}
+
+export interface CleanupSession {
+    id: string;
+    created_by: {
+        id: string;
+        first_name: string;
+        last_name: string;
+        email: string;
+        mobile_number: string;
+    } | null;
+    updated_by: {
+        id: string;
+        first_name: string;
+        last_name: string;
+        email: string;
+        mobile_number: string;
+    } | null;
+    dataset_name: string;
+    dataset_reference: string;
+    success_rate: number;
+    inconsistencies: Inconsistency[];
+    created_datetime: string;
+    updated_datetime: string;
+    session_reference: string;
+    total_rows_processed: number;
+    total_rows_cleaned: number;
+    total_rows_rejected: number;
+    total_inconsistencies: number;
+    status: string;
+    started_datetime: string;
+    completed_datetime: string;
+    error_message: string | null;
+    metadata_template_snapshot: any;
+    cleanup_summary: any;
+    rejected_rows: any[];
+    dataset: string;
+}
+
+export const useGetDatasetCleanupSession = (id: string) => {
+    return useQuery({
+        queryKey: ["datasetCleanupSession", id],
+        queryFn: async () => {
+            const endpoint = DATA_CATALOGUE_API_ROUTES.DATASET_CLEANUP_SESSION.replace('{id}', id);
+            const response = await axiosCallerWithToken.get(endpoint);
+            return response.data.data;
+        },
+        enabled: !!id,
+        staleTime: 5 * 60 * 1000, // 5 minutes
+        retry: 1,
+    });
+};
