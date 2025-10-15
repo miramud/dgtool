@@ -1,446 +1,427 @@
 "use client";
 
-import { useState, useRef, useCallback, useMemo } from "react";
-import { ZoomIn, ZoomOut, RotateCcw, Maximize2 } from "lucide-react";
+import React, { useCallback, useState } from 'react';
+import ReactFlow, {
+  Node,
+  Edge,
+  addEdge,
+  Connection,
+  useNodesState,
+  useEdgesState,
+  Controls,
+  Background,
+  MiniMap,
+  BackgroundVariant,
+  Panel,
+  useReactFlow,
+  ReactFlowProvider,
+} from 'reactflow';
+import 'reactflow/dist/style.css';
+
+import { nodeTypes, BaseNodeData } from './lineage/LineageNodes';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { RotateCcw, Info } from "lucide-react";
+import { formatDate } from "@/lib/utils";
 
-interface LineageNode {
-  id: string;
-  type: string;
-  name: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  bgColor: string;
-  textColor: string;
-  details: {
-    source?: string;
-    datasetName?: string;
-    timestamp?: string;
-    owner?: string;
-    logic?: string;
-    description?: string;
+interface LineageTabProps {
+  dataset: {
+    id: string;
+    name: string;
+    description: string;
+    reference: string;
+    business_domain: string;
+    sensitivity: string;
+    tags: string[];
+    raw_file?: string;
+    processed_file?: string;
+    created_datetime: string;
+    created_by: {
+      first_name: string;
+      last_name: string;
+      email: string;
+    };
+    metadata_template?: {
+      name: string;
+      dataset_type: {
+        name: string;
+      };
+    };
   };
 }
 
-interface LineageConnection {
-  from: string;
-  to: string;
-  label?: string;
-}
-
-interface Transform {
-  scale: number;
-  translateX: number;
-  translateY: number;
-}
-
-export default function LineageTab() {
-  const [selectedItem, setSelectedItem] = useState<LineageNode | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [transform, setTransform] = useState<Transform>({
-    scale: 1,
-    translateX: 0,
-    translateY: 0
-  });
-  const [isPanning, setIsPanning] = useState(false);
-  const [lastPanPoint, setLastPanPoint] = useState({ x: 0, y: 0 });
-  const svgRef = useRef<SVGSVGElement>(null);
-
-  const lineageNodes = useMemo<LineageNode[]>(() => [
+// Generate dynamic nodes based on dataset data
+const generateLineageNodes = (dataset: LineageTabProps['dataset']): Node<BaseNodeData>[] => {
+  const createdBy = `${dataset.created_by.first_name} ${dataset.created_by.last_name}`;
+  const createdDate = formatDate(dataset.created_datetime, { format: 'short', includeTime: true });
+  
+  const nodes: Node<BaseNodeData>[] = [
+    // Source (Raw File Upload)
     {
-      id: "source",
-      type: "Source",
-      name: "SCADA Historian",
-      x: 100,
-      y: 200,
-      width: 160,
-      height: 80,
-      bgColor: "#f3f4f6",
-      textColor: "#374151",
-      details: {
-        description: "Historical data collection system for production monitoring",
-        owner: "Operations Team",
-        timestamp: "2025-08-20 14:30 UTC"
+      id: 'source',
+      type: 'sourceNode',
+      position: { x: 0, y: 50 },
+      data: {
+        label: 'File Upload',
+        details: {
+          description: `Original file uploaded by ${createdBy}`,
+          owner: createdBy,
+          timestamp: createdDate,
+          source: createdBy
+        }
       }
     },
+    // Raw Dataset
     {
-      id: "etl",
-      type: "ETL Pipeline",
-      name: "Daily load",
-      x: 350,
-      y: 200,
-      width: 160,
-      height: 80,
-      bgColor: "#dbeafe",
-      textColor: "#1d4ed8",
-      details: {
-        source: "Data Engineering team",
-        datasetName: "Pass (validation vs reference tables)",
-        timestamp: "2025-08-20 14:30 UTC",
-        owner: "Data Engineering team",
-        logic: "Aggregates daily production values, validates against reference tables, loads to Data Lake"
+      id: 'raw-dataset',
+      type: 'datasetNode',
+      position: { x: 250, y: 50 },
+      data: {
+        label: `${dataset.name} (Raw)`,
+        fileType: 'raw',
+        downloadUrl: dataset.raw_file,
+        details: {
+          description: dataset.description,
+          owner: createdBy,
+          timestamp: createdDate,
+          reference: dataset.reference,
+          sensitivity: dataset.sensitivity,
+          businessDomain: dataset.business_domain,
+          tags: dataset.tags
+        }
       }
     },
+    // ETL Process
     {
-      id: "dataset",
-      type: "Dataset", 
-      name: "Well Production Block A",
-      x: 600,
-      y: 200,
-      width: 160,
-      height: 80,
-      bgColor: "#dcfce7",
-      textColor: "#15803d",
-      details: {
-        description: "Daily oil production data from Niger Delta Block A",
-        owner: "Production Team",
-        timestamp: "2025-08-20 14:30 UTC"
-      }
-    },
-    {
-      id: "target1",
-      type: "Target",
-      name: "Production Dashboard", 
-      x: 850,
-      y: 150,
-      width: 160,
-      height: 80,
-      bgColor: "#fae8ff",
-      textColor: "#9333ea",
-      details: {
-        description: "Real-time dashboard for production monitoring",
-        owner: "Business Intelligence Team",
-        timestamp: "2025-08-20 14:30 UTC"
-      }
-    },
-    {
-      id: "target2",
-      type: "Target",
-      name: "Regulator API", 
-      x: 850,
-      y: 250,
-      width: 160,
-      height: 80,
-      bgColor: "#fae8ff",
-      textColor: "#9333ea",
-      details: {
-        description: "API endpoint for regulatory reporting",
-        owner: "Compliance Team",
-        timestamp: "2025-08-20 14:30 UTC"
+      id: 'etl',
+      type: 'etlNode',
+      position: { x: 500, y: 50 },
+      data: {
+        label: 'Data Processing',
+        details: {
+          source: createdBy,
+          datasetName: dataset.metadata_template?.name || dataset.name,
+          timestamp: createdDate,
+          owner: createdBy,
+          logic: 'Validates, cleanses, and transforms raw data according to business rules and data quality standards'
+        }
       }
     }
-  ], []);
-
-  const connections: LineageConnection[] = [
-    { from: "source", to: "etl", label: "Raw Data" },
-    { from: "etl", to: "dataset", label: "Processed Data" },
-    { from: "dataset", to: "target1", label: "Dashboard Feed" },
-    { from: "dataset", to: "target2", label: "Regulatory Report" }
   ];
 
-  // Zoom and pan functions
-  const handleZoomIn = useCallback(() => {
-    setTransform(prev => ({
-      ...prev,
-      scale: Math.min(prev.scale * 1.2, 3)
-    }));
-  }, []);
+  // Add processed dataset if available
+  if (dataset.processed_file) {
+    nodes.push({
+      id: 'processed-dataset',
+      type: 'datasetNode',
+      position: { x: 750, y: 50 },
+      data: {
+        label: `${dataset.name} (Clean)`,
+        fileType: 'processed',
+        downloadUrl: dataset.processed_file,
+        details: {
+          description: `Processed and cleaned version of ${dataset.name}`,
+          owner: 'System',
+          timestamp: createdDate,
+          reference: dataset.reference,
+          sensitivity: dataset.sensitivity,
+          businessDomain: dataset.business_domain,
+          tags: dataset.tags
+        }
+      }
+    });
+  }
 
-  const handleZoomOut = useCallback(() => {
-    setTransform(prev => ({
-      ...prev,
-      scale: Math.max(prev.scale / 1.2, 0.3)
-    }));
-  }, []);
+  // Target applications removed for now
+
+  return nodes;
+};
+
+// Generate dynamic edges based on dataset data
+const generateLineageEdges = (dataset: LineageTabProps['dataset']): Edge[] => {
+  const edges: Edge[] = [
+    {
+      id: 'e1-2',
+      source: 'source',
+      target: 'raw-dataset',
+      label: 'Upload',
+      type: 'smoothstep',
+      style: { stroke: '#6b7280', strokeWidth: 2 },
+      labelStyle: { fontSize: 12, fontWeight: 500 },
+      labelBgStyle: { fill: '#ffffff', fillOpacity: 0.8 }
+    },
+    {
+      id: 'e2-3',
+      source: 'raw-dataset',
+      target: 'etl',
+      label: 'Raw Data',
+      type: 'smoothstep',
+      style: { stroke: '#6b7280', strokeWidth: 2 },
+      labelStyle: { fontSize: 12, fontWeight: 500 },
+      labelBgStyle: { fill: '#ffffff', fillOpacity: 0.8 }
+    }
+  ];
+
+  // Add processed dataset edge if available
+  if (dataset.processed_file) {
+    edges.push({
+      id: 'e3-4',
+      source: 'etl',
+      target: 'processed-dataset',
+      label: 'Clean Data',
+      type: 'smoothstep',
+      style: { stroke: '#6b7280', strokeWidth: 2 },
+      labelStyle: { fontSize: 12, fontWeight: 500 },
+      labelBgStyle: { fill: '#ffffff', fillOpacity: 0.8 }
+    });
+
+    // Target edges removed for now
+  }
+  // Target edges removed for scenarios without processed files
+
+  return edges;
+};
+
+function LineageFlow({ dataset }: LineageTabProps) {
+  const dynamicNodes = generateLineageNodes(dataset);
+  const dynamicEdges = generateLineageEdges(dataset);
+  
+  const [nodes, , onNodesChange] = useNodesState(dynamicNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(dynamicEdges);
+  const [selectedNode, setSelectedNode] = useState<Node<BaseNodeData> | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const { fitView } = useReactFlow();
+
+  const onConnect = useCallback(
+    (params: Connection) => setEdges((eds) => addEdge(params, eds)),
+    [setEdges],
+  );
+
+  const onNodeClick = useCallback(
+    (_: React.MouseEvent, node: Node<BaseNodeData>) => {
+      setSelectedNode(node);
+      setModalOpen(true);
+    },
+    [],
+  );
 
   const handleReset = useCallback(() => {
-    setTransform({
-      scale: 1,
-      translateX: 0,
-      translateY: 0
-    });
-  }, []);
-
-  const handleFitToScreen = useCallback(() => {
-    // Calculate bounds of all nodes
-    const bounds = lineageNodes.reduce((acc, node) => ({
-      minX: Math.min(acc.minX, node.x),
-      minY: Math.min(acc.minY, node.y),
-      maxX: Math.max(acc.maxX, node.x + node.width),
-      maxY: Math.max(acc.maxY, node.y + node.height)
-    }), { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity });
-
-    const svgRect = svgRef.current?.getBoundingClientRect();
-    if (!svgRect) return;
-
-    const padding = 50;
-    const contentWidth = bounds.maxX - bounds.minX;
-    const contentHeight = bounds.maxY - bounds.minY;
-    const scaleX = (svgRect.width - padding * 2) / contentWidth;
-    const scaleY = (svgRect.height - padding * 2) / contentHeight;
-    const scale = Math.min(scaleX, scaleY, 1);
-
-    const centerX = (bounds.minX + bounds.maxX) / 2;
-    const centerY = (bounds.minY + bounds.maxY) / 2;
-    const svgCenterX = svgRect.width / 2;
-    const svgCenterY = svgRect.height / 2;
-
-    setTransform({
-      scale,
-      translateX: svgCenterX - centerX * scale,
-      translateY: svgCenterY - centerY * scale
-    });
-  }, [lineageNodes]);
-
-  // Mouse event handlers for panning
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    setIsPanning(true);
-    setLastPanPoint({ x: e.clientX, y: e.clientY });
-  }, []);
-
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isPanning) return;
-
-    const deltaX = e.clientX - lastPanPoint.x;
-    const deltaY = e.clientY - lastPanPoint.y;
-
-    setTransform(prev => ({
-      ...prev,
-      translateX: prev.translateX + deltaX,
-      translateY: prev.translateY + deltaY
-    }));
-
-    setLastPanPoint({ x: e.clientX, y: e.clientY });
-  }, [isPanning, lastPanPoint]);
-
-  const handleMouseUp = useCallback(() => {
-    setIsPanning(false);
-  }, []);
-
-  const handleItemClick = (item: LineageNode) => {
-    setSelectedItem(item);
-    setModalOpen(true);
-  };
-
-  // Helper function to get connection path
-  const getConnectionPath = (connection: LineageConnection) => {
-    const fromNode = lineageNodes.find(n => n.id === connection.from);
-    const toNode = lineageNodes.find(n => n.id === connection.to);
-    
-    if (!fromNode || !toNode) return '';
-
-    const fromX = fromNode.x + fromNode.width;
-    const fromY = fromNode.y + fromNode.height / 2;
-    const toX = toNode.x;
-    const toY = toNode.y + toNode.height / 2;
-
-    const midX = (fromX + toX) / 2;
-
-    return `M ${fromX} ${fromY} Q ${midX} ${fromY} ${midX} ${(fromY + toY) / 2} Q ${midX} ${toY} ${toX} ${toY}`;
-  };
+    fitView({ duration: 500, padding: 0.2 });
+  }, [fitView]);
 
   return (
-    <div className="h-[800px] flex flex-col">
-      {/* Toolbar */}
-      <div className="flex items-center gap-2 p-4 border-b bg-gray-50">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleZoomIn}
-          className="flex items-center gap-2"
-        >
-          <ZoomIn className="w-4 h-4" />
-          Zoom In
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleZoomOut}
-          className="flex items-center gap-2"
-        >
-          <ZoomOut className="w-4 h-4" />
-          Zoom Out
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleReset}
-          className="flex items-center gap-2"
-        >
-          <RotateCcw className="w-4 h-4" />
-          Reset
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleFitToScreen}
-          className="flex items-center gap-2"
-        >
-          <Maximize2 className="w-4 h-4" />
-          Fit to Screen
-        </Button>
-        <div className="ml-auto text-sm text-gray-600">
-          Zoom: {Math.round(transform.scale * 100)}% | Click nodes for details | Drag to pan
-        </div>
-      </div>
+    <div className="h-[800px] w-full">
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        onNodeClick={onNodeClick}
+        nodeTypes={nodeTypes}
+        fitView
+        attributionPosition="top-right"
+        proOptions={{
+          hideAttribution: true,
+        }}
+      >
+        {/* Background with grid pattern */}
+        <Background 
+          variant={BackgroundVariant.Dots} 
+          gap={20} 
+          size={1}
+          color="#e5e7eb"
+        />
+        
+        {/* Controls panel */}
+        <Controls 
+          position="top-left"
+          showZoom={true}
+          showFitView={true}
+          showInteractive={true}
+        />
+        
+        {/* Mini map */}
+        <MiniMap 
+          position="bottom-right"
+          nodeColor="#6b7280"
+          maskColor="rgba(0, 0, 0, 0.1)"
+          style={{
+            backgroundColor: '#ffffff',
+            border: '1px solid #e5e7eb',
+          }}
+        />
 
-      {/* SVG Canvas */}
-      <div className="flex-1 relative overflow-hidden bg-white">
-        <svg
-          ref={svgRef}
-          className="w-full h-full cursor-grab active:cursor-grabbing"
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-        >
-          <defs>
-            <marker
-              id="arrowhead"
-              markerWidth="10"
-              markerHeight="7"
-              refX="10"
-              refY="3.5"
-              orient="auto"
+        {/* Custom panel with reset button and instructions */}
+        <Panel position="top-right" className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+          <div className="flex flex-col gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleReset}
+              className="flex items-center gap-2 text-xs"
             >
-              <polygon
-                points="0 0, 10 3.5, 0 7"
-                fill="#6b7280"
-              />
-            </marker>
-            
-            {/* Drop shadow filter */}
-            <filter id="dropshadow" x="-20%" y="-20%" width="140%" height="140%">
-              <feDropShadow dx="2" dy="4" stdDeviation="3" floodOpacity="0.1"/>
-            </filter>
-          </defs>
+              <RotateCcw className="w-3 h-3" />
+              Reset View
+            </Button>
+            <div className="text-xs text-gray-600 flex items-center gap-1">
+              <Info className="w-3 h-3" />
+              Click nodes for details
+            </div>
+          </div>
+        </Panel>
+      </ReactFlow>
 
-          <g transform={`translate(${transform.translateX}, ${transform.translateY}) scale(${transform.scale})`}>
-            {/* Render connections */}
-            {connections.map((connection, index) => (
-              <g key={`connection-${index}`}>
-                <path
-                  d={getConnectionPath(connection)}
-                  stroke="#6b7280"
-                  strokeWidth="2"
-                  fill="none"
-                  markerEnd="url(#arrowhead)"
-                  className="transition-all duration-200"
-                />
-                {connection.label && (
-                  <text
-                    x={(lineageNodes.find(n => n.id === connection.from)!.x + lineageNodes.find(n => n.id === connection.from)!.width + lineageNodes.find(n => n.id === connection.to)!.x) / 2}
-                    y={(lineageNodes.find(n => n.id === connection.from)!.y + lineageNodes.find(n => n.id === connection.to)!.y) / 2 - 10}
-                    textAnchor="middle"
-                    className="text-xs fill-gray-600 font-medium"
-                    style={{ pointerEvents: 'none' }}
-                  >
-                    {connection.label}
-                  </text>
-                )}
-              </g>
-            ))}
-
-            {/* Render nodes */}
-            {lineageNodes.map((node) => (
-              <g key={node.id} className="cursor-pointer" onClick={() => handleItemClick(node)}>
-                <rect
-                  x={node.x}
-                  y={node.y}
-                  width={node.width}
-                  height={node.height}
-                  fill={node.bgColor}
-                  stroke="#e5e7eb"
-                  strokeWidth="1"
-                  rx="8"
-                  filter="url(#dropshadow)"
-                  className="transition-all duration-200 hover:stroke-blue-400 hover:stroke-2"
-                />
-                
-                <text
-                  x={node.x + node.width / 2}
-                  y={node.y + 25}
-                  textAnchor="middle"
-                  className="text-sm font-semibold pointer-events-none"
-                  fill={node.textColor}
-                >
-                  {node.type}
-                </text>
-                
-                <foreignObject
-                  x={node.x + 8}
-                  y={node.y + 35}
-                  width={node.width - 16}
-                  height={node.height - 45}
-                  className="pointer-events-none"
-                >
-                  <div className="text-xs text-center font-medium text-gray-900 leading-tight px-2 overflow-hidden">
-                    {node.name}
-                  </div>
-                </foreignObject>
-              </g>
-            ))}
-          </g>
-        </svg>
-      </div>
-
-      {/* Details Modal */}
+      {/* Node Details Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="text-lg font-semibold">
-              {selectedItem?.type}
+              {selectedNode?.data.label}
             </DialogTitle>
           </DialogHeader>
           
-          {selectedItem && (
+          {selectedNode?.data.details && (
             <div className="space-y-4 mt-4">
-              {selectedItem.details.source && (
-                <div className="flex justify-between">
-                  <span className="font-medium text-gray-600">Source:</span>
-                  <span className="text-gray-900">{selectedItem.details.source}</span>
-                </div>
-              )}
-              
-              {selectedItem.details.datasetName && (
-                <div className="flex justify-between">
-                  <span className="font-medium text-gray-600">Dataset name:</span>
-                  <span className="text-gray-900">{selectedItem.details.datasetName}</span>
-                </div>
-              )}
-              
-              {selectedItem.details.timestamp && (
-                <div className="flex justify-between">
-                  <span className="font-medium text-gray-600">Timestamp:</span>
-                  <span className="text-gray-900">{selectedItem.details.timestamp}</span>
-                </div>
-              )}
-              
-              {selectedItem.details.owner && (
-                <div className="flex justify-between">
-                  <span className="font-medium text-gray-600">Owner:</span>
-                  <span className="text-gray-900">{selectedItem.details.owner}</span>
-                </div>
-              )}
-              
-              {selectedItem.details.logic && (
-                <div className="space-y-1">
-                  <span className="font-medium text-gray-600">Logic:</span>
-                  <p className="text-gray-900 text-sm leading-relaxed">
-                    {selectedItem.details.logic}
-                  </p>
-                </div>
-              )}
-              
-              {selectedItem.details.description && (
+              {selectedNode.data.details.description && (
                 <div className="space-y-1">
                   <span className="font-medium text-gray-600">Description:</span>
                   <p className="text-gray-900 text-sm leading-relaxed">
-                    {selectedItem.details.description}
+                    {selectedNode.data.details.description}
                   </p>
+                </div>
+              )}
+              
+              {selectedNode.data.details.reference && (
+                <div className="flex justify-between">
+                  <span className="font-medium text-gray-600">Reference:</span>
+                  <span className="text-gray-900 font-mono text-xs">{selectedNode.data.details.reference}</span>
+                </div>
+              )}
+              
+              {selectedNode.data.details.owner && (
+                <div className="flex justify-between">
+                  <span className="font-medium text-gray-600">Owner:</span>
+                  <span className="text-gray-900">{selectedNode.data.details.owner}</span>
+                </div>
+              )}
+              
+              {selectedNode.data.details.timestamp && (
+                <div className="flex justify-between">
+                  <span className="font-medium text-gray-600">Created:</span>
+                  <span className="text-gray-900">{selectedNode.data.details.timestamp}</span>
+                </div>
+              )}
+              
+              {selectedNode.data.details.businessDomain && (
+                <div className="flex justify-between">
+                  <span className="font-medium text-gray-600">Business Domain:</span>
+                  <span className="text-gray-900 capitalize">{selectedNode.data.details.businessDomain}</span>
+                </div>
+              )}
+              
+              {selectedNode.data.details.sensitivity && (
+                <div className="flex justify-between">
+                  <span className="font-medium text-gray-600">Sensitivity:</span>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    selectedNode.data.details.sensitivity === 'INTERNAL' ? 'bg-yellow-100 text-yellow-800' :
+                    selectedNode.data.details.sensitivity === 'EXTERNAL' ? 'bg-green-100 text-green-800' :
+                    'bg-red-100 text-red-800'
+                  }`}>
+                    {selectedNode.data.details.sensitivity}
+                  </span>
+                </div>
+              )}
+              
+              {selectedNode.data.details.tags && selectedNode.data.details.tags.length > 0 && (
+                <div className="space-y-1">
+                  <span className="font-medium text-gray-600">Tags:</span>
+                  <div className="flex flex-wrap gap-1">
+                    {selectedNode.data.details.tags.map((tag, index) => (
+                      <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Show different details for ETL node */}
+              {selectedNode.type === 'etlNode' ? (
+                <>
+                  {selectedNode.data.details.source && (
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-600">Source:</span>
+                      <span className="text-gray-900">{selectedNode.data.details.source}</span>
+                    </div>
+                  )}
+                  
+                  {selectedNode.data.details.datasetName && (
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-600">Dataset name:</span>
+                      <span className="text-gray-900">{selectedNode.data.details.datasetName}</span>
+                    </div>
+                  )}
+                  
+                  {selectedNode.data.details.timestamp && (
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-600">Timestamp:</span>
+                      <span className="text-gray-900">{selectedNode.data.details.timestamp}</span>
+                    </div>
+                  )}
+                  
+                  {selectedNode.data.details.owner && (
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-600">Owner:</span>
+                      <span className="text-gray-900">{selectedNode.data.details.owner}</span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  {selectedNode.data.details.source && (
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-600">Source:</span>
+                      <span className="text-gray-900">{selectedNode.data.details.source}</span>
+                    </div>
+                  )}
+                  
+                  {selectedNode.data.details.datasetName && (
+                    <div className="flex justify-between">
+                      <span className="font-medium text-gray-600">Template:</span>
+                      <span className="text-gray-900">{selectedNode.data.details.datasetName}</span>
+                    </div>
+                  )}
+                  
+                  {selectedNode.data.details.logic && (
+                    <div className="space-y-1">
+                      <span className="font-medium text-gray-600">Processing Logic:</span>
+                      <p className="text-gray-900 text-sm leading-relaxed bg-gray-50 p-3 rounded-md">
+                        {selectedNode.data.details.logic}
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
+              
+              {/* Download button if this node has a download URL */}
+              {selectedNode.data.downloadUrl && (
+                <div className="pt-2 border-t">
+                  <Button
+                    onClick={() => {
+                      const link = document.createElement('a');
+                      link.href = selectedNode.data.downloadUrl!;
+                      link.download = '';
+                      link.target = '_blank';
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }}
+                    className="w-full bg-[#4A4A7A] hover:bg-[#3A3A6A] text-white"
+                  >
+                    Download {selectedNode.data.fileType === 'raw' ? 'Raw' : 'Processed'} File
+                  </Button>
                 </div>
               )}
             </div>
@@ -448,5 +429,13 @@ export default function LineageTab() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function LineageTab(props: LineageTabProps) {
+  return (
+    <ReactFlowProvider>
+      <LineageFlow {...props} />
+    </ReactFlowProvider>
   );
 }

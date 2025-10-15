@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import StatusBadge from "@/components/shared/StatusBadge";
+import { useGetDataCatalogueById } from "../controllers/dataCatalogueController";
 
 // Tab content components
 import OverviewTab from "../components/OverviewTab";
@@ -17,27 +18,53 @@ import VersionHistoryTab from "../components/VersionHistoryTab";
 
 interface DataCatalogueViewProps {
   className?: string;
-  datasetId?: string;
+  datasetId: string;
 }
 
-interface DatasetInfo {
-  name: string;
-  id: string;
-  tags: string[];
-  securityClassification: string;
-}
-
-const mockDatasetInfo: DatasetInfo = {
-  name: "Well Production Data – Niger Delta Block A",
-  id: "DS-PRD-00032",
-  tags: ["Production", "Reservoir", "Seismic"],
-  securityClassification: "Confidential"
-};
 
 export default function DataCatalogueView({
   className,
+  datasetId,
 }: DataCatalogueViewProps) {
   const [activeTab, setActiveTab] = useState("overview");
+  
+  // Fetch dataset data
+  const { data: dataset, isLoading, error } = useGetDataCatalogueById(datasetId);
+
+  if (isLoading) {
+    return (
+      <div className={cn("p-6 space-y-6 bg-white", className)}>
+        <div className="animate-pulse">
+          <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="grid grid-cols-4 gap-6">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-20 bg-gray-200 rounded"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={cn("p-6 space-y-6 bg-white", className)}>
+        <div className="text-center py-8">
+          <p className="text-red-600">Error loading dataset: {error.message}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!dataset) {
+    return (
+      <div className={cn("p-6 space-y-6 bg-white", className)}>
+        <div className="text-center py-8">
+          <p className="text-gray-600">Dataset not found</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={cn("p-6 space-y-6 bg-white", className)}>
@@ -58,7 +85,7 @@ export default function DataCatalogueView({
           <CardContent className="py-4">
             <div className="space-y-1">
               <h3 className="text-sm font-medium text-gray-600">Dataset Name</h3>
-              <p className="text-sm text-gray-900">{mockDatasetInfo.name}</p>
+              <p className="text-sm text-gray-900">{dataset.name}</p>
             </div>
           </CardContent>
         </Card>
@@ -68,7 +95,7 @@ export default function DataCatalogueView({
           <CardContent className="py-4">
             <div className="space-y-1">
               <h3 className="text-sm font-medium text-gray-600">Dataset ID</h3>
-              <p className="text-sm text-gray-900">{mockDatasetInfo.id}</p>
+              <p className="text-sm text-gray-900">{dataset.id}</p>
             </div>
           </CardContent>
         </Card>
@@ -79,7 +106,9 @@ export default function DataCatalogueView({
             <div className="space-y-2">
               <h3 className="text-sm font-medium text-gray-600">Tags</h3>
               <div className="flex flex-wrap gap-1">
-                {mockDatasetInfo.tags.map((tag, index) => (
+                {(Array.isArray(dataset.tags) ? dataset.tags : 
+                  typeof dataset.tags === 'string' ? dataset.tags.split(',').map((tag: string) => tag.trim()) : []
+                ).map((tag: string, index: number) => (
                   <StatusBadge 
                     key={index} 
                     status={tag} 
@@ -97,7 +126,7 @@ export default function DataCatalogueView({
           <CardContent className="py-4">
             <div className="space-y-1">
               <h3 className="text-sm font-medium text-gray-600">Security Classifications</h3>
-              <p className="text-sm text-gray-900">{mockDatasetInfo.securityClassification}</p>
+              <p className="text-sm text-gray-900">{dataset.sensitivity}</p>
             </div>
           </CardContent>
         </Card>
@@ -115,27 +144,27 @@ export default function DataCatalogueView({
         </TabsList>
 
         <TabsContent value="overview">
-          <OverviewTab />
+          <OverviewTab dataset={dataset} />
         </TabsContent>
 
         <TabsContent value="metadata">
-          <MetadataTab />
+          <MetadataTab dataset={dataset} />
         </TabsContent>
 
         <TabsContent value="data-quality">
-          <DataQualityTab />
+          <DataQualityTab dataset={dataset} />
         </TabsContent>
 
         <TabsContent value="lineage">
-          <LineageTab />
+          <LineageTab dataset={dataset} />
         </TabsContent>
 
         <TabsContent value="access-permissions">
-          <AccessPermissionsTab />
+          <AccessPermissionsTab dataset={dataset} />
         </TabsContent>
 
         <TabsContent value="version-history">
-          <VersionHistoryTab />
+          <VersionHistoryTab dataset={dataset} />
         </TabsContent>
       </Tabs>
     </div>

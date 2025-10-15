@@ -1,19 +1,25 @@
 "use client";
 
-export default function OverviewTab() {
+import { formatDate } from "@/lib/utils";
+
+interface OverviewTabProps {
+  dataset: any;
+}
+
+export default function OverviewTab({ dataset }: OverviewTabProps) {
   const overviewData = {
-    description: "Daily oil production data collected from Niger Delta Block A, aggregated from wellhead sensors and historian logs.",
-    dataOwner: "John Doe – Production Team",
-    dataSteward: "Mary Smith – Data Governance", 
-    sourceSystem: "SCADA / Historian / Manual Upload",
-    businessUnit: "Upstream – Operations",
-    lastUpdated: "2025-08-20 14:30 UTC"
+    description: dataset?.description || "No description available",
+    dataOwner: dataset?.created_by ? `${dataset.created_by.first_name} ${dataset.created_by.last_name}` : "Unknown",
+    dataSteward: dataset?.updated_by ? `${dataset.updated_by.first_name} ${dataset.updated_by.last_name}` : "Unknown", 
+    sourceSystem: "System Upload",
+    businessUnit: dataset?.business_domain || "Unknown",
+    lastUpdated: dataset?.updated_datetime ? formatDate(dataset.updated_datetime, { includeTime: true }) : "Unknown"
   };
 
   const infoItems = [
     { label: "Description:", value: overviewData.description },
     { label: "Data Owner:", value: overviewData.dataOwner },
-    { label: "Data Steward:", value: overviewData.dataSteward },
+    { label: "Data Steward:", value: overviewData.dataOwner },
     { label: "Source System:", value: overviewData.sourceSystem },
     { label: "Business Unit:", value: overviewData.businessUnit },
     { label: "Last Updated:", value: overviewData.lastUpdated },

@@ -14,6 +14,7 @@ interface Step {
   id: string;
   content: ReactNode;
   title?: string;
+  isValid?: boolean | (() => boolean);
 }
 
 interface MultiStepDialogProps {
@@ -24,6 +25,9 @@ interface MultiStepDialogProps {
   onComplete?: () => void;
   finalButtonLabel?: string;
   hideStepIndicator?: boolean;
+  currentStep?: number;
+  onStepChange?: (step: number) => void;
+  isLoading?: boolean;
 }
 
 export default function MultiStepDialog({
@@ -34,10 +38,30 @@ export default function MultiStepDialog({
   onComplete,
   finalButtonLabel = "Complete",
   hideStepIndicator = false,
+  currentStep: externalCurrentStep,
+  onStepChange,
+  isLoading = false,
 }: MultiStepDialogProps) {
-  const [currentStep, setCurrentStep] = useState(0);
+  const [internalCurrentStep, setInternalCurrentStep] = useState(0);
+  
+  // Use external step if provided, otherwise use internal
+  const currentStep = externalCurrentStep !== undefined ? externalCurrentStep : internalCurrentStep;
+  const setCurrentStep = onStepChange || setInternalCurrentStep;
+
+  const isCurrentStepValid = () => {
+    const step = steps[currentStep];
+    if (step?.isValid === undefined) return true;
+    if (typeof step.isValid === 'function') {
+      return step.isValid();
+    }
+    return step.isValid;
+  };
 
   const handleNext = () => {
+    if (!isCurrentStepValid()) {
+      return; // Don't proceed if current step is not valid
+    }
+    
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
@@ -140,9 +164,20 @@ export default function MultiStepDialog({
             </Button>
             <Button
               onClick={handleNext}
-              className='bg-[#4A4A7A] hover:bg-[#3A3A6A] min-w-[160px]'
+              disabled={!isCurrentStepValid() || isLoading}
+              className='bg-[#4A4A7A] hover:bg-[#3A3A6A] min-w-[160px] disabled:opacity-50 disabled:cursor-not-allowed'
             >
-              {isLastStep ? finalButtonLabel : "Next"}
+              {isLoading && isLastStep ? (
+                <div className="flex items-center gap-2">
+                  <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25"></circle>
+                    <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" className="opacity-75"></path>
+                  </svg>
+                  {finalButtonLabel}
+                </div>
+              ) : (
+                isLastStep ? finalButtonLabel : "Next"
+              )}
             </Button>
           </div>
         </DialogFooter>

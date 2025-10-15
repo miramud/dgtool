@@ -1,18 +1,35 @@
 "use client";
 
-export default function AccessPermissionsTab() {
+interface AccessPermissionsTabProps {
+  dataset: any;
+}
+
+export default function AccessPermissionsTab({ dataset }: AccessPermissionsTabProps) {
+  // Use dataset information to show access details
   const accessInfo = [
     {
-      category: "View Access:",
-      items: ["Production Engineers", "Reservoir Engineers"]
+      category: "Data Owner:",
+      items: [dataset?.created_by ? `${dataset.created_by.first_name} ${dataset.created_by.last_name}` : "Unknown"]
     },
     {
-      category: "Edit Access:",
-      items: ["Data Steward", "Data Owner"]
+      category: "Created By:",
+      items: [dataset?.created_by ? `${dataset.created_by.first_name} ${dataset.created_by.last_name} (${dataset.created_by.email})` : "Unknown"]
     },
     {
-      category: "Approval Workflow:",
-      items: ["Restricted edits – Requires owner approval"]
+      category: "Business Domain:",
+      items: [dataset?.business_domain || "Unknown"]
+    },
+    {
+      category: "Sensitivity Level:",
+      items: [dataset?.sensitivity || "Unknown"]
+    },
+    // {
+    //   category: "Client Access:",
+    //   items: [dataset?.client ? "Restricted to client" : "General access"]
+    // },
+    {
+      category: "Last Updated By:",
+      items: [dataset?.updated_by ? `${dataset.updated_by.first_name} ${dataset.updated_by.last_name} (${dataset.updated_by.email})` : "Not updated"]
     }
   ];
 

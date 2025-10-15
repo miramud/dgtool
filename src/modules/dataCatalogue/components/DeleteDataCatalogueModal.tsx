@@ -15,13 +15,15 @@ interface DeleteDataCatalogueModalProps {
   onOpenChange: (open: boolean) => void;
   selectedDataCatalogue: DataCatalogue | null;
   onConfirm: () => void;
+  isLoading?: boolean;
 }
 
 export default function DeleteDataCatalogueModal({
   open,
   onOpenChange,
-  // selectedDataCatalogue,
+  selectedDataCatalogue,
   onConfirm,
+  isLoading = false,
 }: DeleteDataCatalogueModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -29,16 +31,15 @@ export default function DeleteDataCatalogueModal({
         <DialogHeader>
           <DialogTitle>Delete Data Asset</DialogTitle>
           <DialogDescription>
-            Are you sure you want to delete this data asset? This action cannot
-            be undone.
+            Are you sure you want to delete <strong>{selectedDataCatalogue?.businessTechnicalSpecification || 'this data asset'}</strong>? This action cannot be undone.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant='outline' onClick={() => onOpenChange(false)}>
+          <Button variant='outline' onClick={() => onOpenChange(false)} disabled={isLoading}>
             Cancel
           </Button>
-          <Button variant='destructive' onClick={onConfirm}>
-            Delete
+          <Button variant='destructive' onClick={onConfirm} disabled={isLoading}>
+            {isLoading ? 'Deleting...' : 'Delete'}
           </Button>
         </DialogFooter>
       </DialogContent>

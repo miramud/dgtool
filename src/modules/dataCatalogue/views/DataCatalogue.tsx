@@ -24,8 +24,8 @@ import AdvancedTable from "../../../components/shared/AdvancedTable";
 import StatusBadge from "../../../components/shared/StatusBadge";
 import { BusinessDescription } from "../types/dataCatalogue";
 import type { DataCatalogue } from "../types/dataCatalogue";
-import { mockDataCatalogue } from "../data/mockDataCatalogue";
-import { cn } from "@/lib/utils";
+import { useGetDataCatalogue, useDeleteDataCatalogue } from "../controllers/dataCatalogueController";
+import { cn, formatDate } from "@/lib/utils";
 import DataCatalogueModal from "../components/DataCatalogueModal";
 import DeleteDataCatalogueModal from "../components/DeleteDataCatalogueModal";
 import RequestAccessModal from "../components/RequestAccessModal";
@@ -67,34 +67,44 @@ export default function DataCatalogue({
   const [modalOpen, setModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [requestAccessModalOpen, setRequestAccessModalOpen] = useState(false);
-  // const [isLoading, setIsLoading] = useState(false);
+
+  // Get data from API using React Query
+  const { data: apiData, isLoading, refetch } = useGetDataCatalogue();
+  
+  // Delete hook
+  const { deleteDataCatalogue, isLoading: isDeleting } = useDeleteDataCatalogue();
 
   const debouncedSearchValue = useDebounce(searchValue, 500);
+  
+
+  // Use API data or fallback to empty array
+  const dataCatalogueData = useMemo(() => Array.isArray(apiData) ? apiData : [], [apiData]);
 
   // BusinessDescription options for filtering (mimicking performance dialog pattern)
   const businessDescriptionOptions = [
     "All Business Descriptions",
     ...Object.values(BusinessDescription),
   ];
+  
 
   // Filter data catalogue based on search and business description
   const filteredDataCatalogue = useMemo(() => {
-    let dataCatalogue = [...mockDataCatalogue];
-
+    let dataCatalogue = [...dataCatalogueData];
+    
     // Apply search filter
     if (debouncedSearchValue) {
       dataCatalogue = dataCatalogue.filter(
         (item) =>
           item.businessTechnicalSpecification
-            .toLowerCase()
+            ?.toLowerCase()
             .includes(debouncedSearchValue.toLowerCase()) ||
           item.businessDescription
-            .toLowerCase()
+            ?.toLowerCase()
             .includes(debouncedSearchValue.toLowerCase()) ||
           item.usageGuidelines
-            .toLowerCase()
+            ?.toLowerCase()
             .includes(debouncedSearchValue.toLowerCase()) ||
-          item.tags.some((tag) =>
+          item.tags?.some((tag: string) =>
             tag.toLowerCase().includes(debouncedSearchValue.toLowerCase())
           )
       );
@@ -111,8 +121,8 @@ export default function DataCatalogue({
     }
 
     return dataCatalogue;
-  }, [debouncedSearchValue, selectedBusinessDescription]);
-
+  }, [debouncedSearchValue, selectedBusinessDescription, dataCatalogueData]);
+  
   // Table columns configuration
   const columns = [
     {
@@ -127,20 +137,20 @@ export default function DataCatalogue({
   ];
 
   // Format table cell data
-  const getFormattedValue = (item: DataCatalogue, columnKey: string) => {
+  const getFormattedValue = (item: DataCatalogue, columnKey: string) => {    
     switch (columnKey) {
       case "businessTechnicalSpecification":
         return (
           <span className='text-gray-900'>
-            {item.businessTechnicalSpecification}
+            {item.name}
           </span>
         );
       case "businessDescription":
         return (
-          <span className='text-gray-900'>{item.businessDescription}</span>
+          <span className='text-gray-900'>{item.description}</span>
         );
       case "usageGuidelines":
-        return <span className='text-gray-900'>{item.usageGuidelines}</span>;
+        return <span className='text-gray-900'>{item.dataset_type}</span>;
       case "tags":
         return (
           <div className='flex flex-wrap gap-1'>
@@ -162,9 +172,9 @@ export default function DataCatalogue({
           </div>
         );
       case "date":
-        return <span className='text-gray-900'>{item.date}</span>;
+        return <span className='text-gray-900'>{formatDate(item.created_datetime)}</span>;
       case "dataSource":
-        return <span className='text-gray-900'>{item.dataSource}</span>;
+        return <span className='text-gray-900'>{item.sensitivity}</span>;
       default:
         return null;
     }
@@ -208,11 +218,21 @@ export default function DataCatalogue({
   };
 
   // Handle individual delete
-  const handleDelete = () => {
-    console.log("Delete data catalogue:", selectedDataCatalogue);
-    setDeleteModalOpen(false);
-    setSelectedDataCatalogue(null);
-    // Implement delete logic
+  const handleDelete = async () => {
+    if (!selectedDataCatalogue?.id) {
+      console.error("No dataset selected for deletion");
+      return;
+    }
+
+    try {
+      await deleteDataCatalogue(selectedDataCatalogue.id);
+      setDeleteModalOpen(false);
+      setSelectedDataCatalogue(null);
+      // Refresh the data after successful deletion
+      refetch();
+    } catch (error) {
+      console.error("Error deleting dataset:", error);
+    }
   };
 
   // Handle request access submission
@@ -347,7 +367,7 @@ export default function DataCatalogue({
       <AdvancedTable
         data={filteredDataCatalogue}
         columns={columns}
-        // isLoading={isLoading}
+        isLoading={isLoading}
         showCheckBox={true}
         options={tableOptions}
         getFormattedValue={getFormattedValue}
@@ -396,6 +416,7 @@ export default function DataCatalogue({
         onOpenChange={setDeleteModalOpen}
         selectedDataCatalogue={selectedDataCatalogue}
         onConfirm={handleDelete}
+        isLoading={isDeleting}
       />
 
       <RequestAccessModal

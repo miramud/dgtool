@@ -1,6 +1,7 @@
 import { DATA_CATALOGUE_API_ROUTES } from "@/constants/dataCatalogue-api-routes";
 import useApiManager from "@/constants/controllers/mainController";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { axiosCallerWithToken } from "@/lib/helpers";
 import { AxiosError } from "axios";
 import { DataCatalogue, DataCatalogueFormData } from "../types/dataCatalogue";
 
@@ -11,18 +12,51 @@ export interface DataCatalogueResponse {
     limit: number;
 }
 
+export interface CreateDatasetFormData {
+    name: string;
+    description: string;
+    business_domain: string;
+    sensitivity: "INTERNAL" | "EXTERNAL" | "PRIVATE";
+    tags: string;
+    raw_file: File;
+    dataset_type: string;
+    metadata_template?: string;
+}
+
 export const useCreateDataCatalogue = () => {
     const { callApi, data, isLoading, isSuccess, isError, error } =
-        useApiManager<DataCatalogue, AxiosError, DataCatalogueFormData>({
-            endpoint: DATA_CATALOGUE_API_ROUTES.CREATE_DATA_CATALOGUE,
+        useApiManager<DataCatalogue, AxiosError, FormData>({
+            endpoint: DATA_CATALOGUE_API_ROUTES.DATASETS,
             method: "POST",
             isAuth: true,
             showSuccessToast: true,
+            contentType: "multipart/form-data",
             queryKey: ["dataCatalogue"],
         });
 
-    const createDataCatalogue = async (formData: DataCatalogueFormData) => {
-        return await callApi(formData);
+    const createDataCatalogue = async (formData: CreateDatasetFormData) => {
+        const submitData = new FormData();
+        submitData.append('name', formData.name);
+        submitData.append('description', formData.description);
+        submitData.append('business_domain', formData.business_domain);
+        submitData.append('sensitivity', formData.sensitivity);
+        
+        // Convert comma-separated tags to JSON array
+        const tagsArray = formData.tags
+            .split(',')
+            .map(tag => tag.trim())
+            .filter(tag => tag.length > 0);
+        submitData.append('tags', JSON.stringify(tagsArray));
+        
+        submitData.append('raw_file', formData.raw_file);
+        submitData.append('dataset_type', formData.dataset_type);
+        
+        // Only append metadata_template if it exists
+        if (formData.metadata_template) {
+            submitData.append('metadata_template', formData.metadata_template);
+        }
+        
+        return await callApi(submitData);
     };
 
     return {
@@ -38,7 +72,7 @@ export const useCreateDataCatalogue = () => {
 export const useUpdateDataCatalogue = () => {
     const { callApi, data, isLoading, isSuccess, isError, error } =
         useApiManager<DataCatalogue, AxiosError, DataCatalogueFormData & { id: string }>({
-            endpoint: DATA_CATALOGUE_API_ROUTES.UPDATE_DATA_CATALOGUE,
+            endpoint: DATA_CATALOGUE_API_ROUTES.DATASET_BY_ID,
             method: "PUT",
             isAuth: true,
             showSuccessToast: true,
@@ -60,43 +94,95 @@ export const useUpdateDataCatalogue = () => {
 };
 
 export const useDeleteDataCatalogue = () => {
-    const { callApi, data, isLoading, isSuccess, isError, error } =
-        useApiManager<{ message: string }, AxiosError, { id: string }>({
-            endpoint: DATA_CATALOGUE_API_ROUTES.DELETE_DATA_CATALOGUE,
-            method: "DELETE",
-            isAuth: true,
-            showSuccessToast: true,
-            queryKey: ["dataCatalogue"],
-        });
-
     const deleteDataCatalogue = async (id: string) => {
-        return await callApi({ id });
+        const endpoint = DATA_CATALOGUE_API_ROUTES.DATASET_BY_ID.replace('{id}', id);
+        const response = await axiosCallerWithToken.delete(endpoint);
+        return response.data;
     };
 
+    const { mutateAsync, isPending, isSuccess, isError, error } = useMutation({
+        mutationFn: deleteDataCatalogue,
+        onSuccess: () => {
+            // You can add success toast here if needed
+        },
+        onError: (error: any) => {
+            console.error('Delete error:', error);
+        }
+    });
+
     return {
-        deleteDataCatalogue,
-        data,
-        isLoading,
+        deleteDataCatalogue: mutateAsync,
+        isLoading: isPending,
         isSuccess,
         isError,
         error,
     };
 };
 
-export const useGetDataCatalogue = (page = 1, limit = 10, search = "") => {
+export const useGetDataCatalogue = () => {
     return useQuery({
-        queryKey: ["dataCatalogue", page, limit, search],
+        queryKey: ["dataCatalogue"],
         queryFn: async () => {
-            // For now, return mock data
-            // In production, this would make an API call
-            const mockDataCatalogue = await import("../data/mockDataCatalogue");
-            return {
-                dataCatalogue: mockDataCatalogue.mockDataCatalogue,
-                total: mockDataCatalogue.mockDataCatalogue.length,
-                page: 1,
-                limit: 10,
-            } as DataCatalogueResponse;
+            const response = await axiosCallerWithToken.get(DATA_CATALOGUE_API_ROUTES.DATASETS);
+            return response.data.data?.results || response.data.results || response.data.data || response.data;
         },
         staleTime: 5 * 60 * 1000, // 5 minutes
+        retry: 1,
+    });
+};
+
+export const useGetDataCatalogueById = (id: string) => {
+    return useQuery({
+        queryKey: ["dataCatalogue", id],
+        queryFn: async () => {
+            const endpoint = DATA_CATALOGUE_API_ROUTES.DATASET_BY_ID.replace('{id}', id);
+            const response = await axiosCallerWithToken.get(endpoint);
+            return response.data.data;
+        },
+        enabled: !!id, // Only fetch when id is provided
+        staleTime: 5 * 60 * 1000, // 5 minutes
+        retry: 1,
+    });
+};
+
+
+export interface DatasetType {
+    id: string;
+    name: string;
+    description?: string;
+}
+
+export interface MetadataTemplate {
+    id: string;
+    name: string;
+    description?: string;
+}
+
+export const useGetDatasetTypes = () => {
+    return useQuery({
+        queryKey: ["datasetTypes"],
+        queryFn: async () => {
+            const response = await axiosCallerWithToken.get(DATA_CATALOGUE_API_ROUTES.DATASET_TYPES);
+            return response.data.data?.results || response.data.results || response.data;
+        },
+        staleTime: 5 * 60 * 1000, // 5 minutes
+        retry: 1,
+    });
+};
+
+export const useGetMetadataTemplates = (datasetTypeId?: string) => {
+    return useQuery({
+        queryKey: ["metadataTemplates", datasetTypeId],
+        queryFn: async () => {
+            let url: string = DATA_CATALOGUE_API_ROUTES.TEMPLATES;
+            if (datasetTypeId) {
+                url = `${url}?dataset_type=${datasetTypeId}`;
+            }
+            const response = await axiosCallerWithToken.get(url);
+            return response.data.data?.results || response.data.results || response.data;
+        },
+        enabled: !!datasetTypeId, // Only fetch when dataset type is selected
+        staleTime: 5 * 60 * 1000, // 5 minutes
+        retry: 1,
     });
 };

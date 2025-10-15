@@ -2,7 +2,12 @@
 
 import AdvancedTable from "@/components/shared/AdvancedTable";
 
-export default function VersionHistoryTab() {
+interface VersionHistoryTabProps {
+  dataset: any;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export default function VersionHistoryTab({ dataset }: VersionHistoryTabProps) {
   const versionHistory = [
     {
       version: "v1.3",

@@ -1,19 +1,23 @@
 "use client";
 
-export default function MetadataTab() {
+interface MetadataTabProps {
+  dataset: any;
+}
+
+export default function MetadataTab({ dataset }: MetadataTabProps) {
   const metadataInfo = [
-    { label: "Data Type:", value: "Time-series / Tabular / Geospatial" },
-    { label: "Record Count:", value: "2.5M rows" },
-    { label: "File Format:", value: "CSV / Parquet / Shapefile" },
-    { 
-      label: "Schema:", 
-      value: "Column names + data types (e.g., Well_ID [string], Date [date], Oil_Produced [float], Gas_Produced [float])" 
-    },
-    { label: "Storage Location:", value: "Azure Data Lake – WellData/BlockA/2025" },
-    { label: "Associated Asset:", value: "Block A – Offshore Field" },
-    { label: "KPI Linkages:", value: "Daily Production, Water Cut %" },
-    { label: "Reporting Use:", value: "Regulatory reporting, reservoir performance monitoring" },
-    { label: "Related Datasets:", value: "Reservoir Simulation Data, Seismic Interpretation Data" }
+    { label: "Data Type:", value: dataset?.metadata_template?.dataset_type?.name || "Unknown" },
+    // { label: "Record Count:", value: "To be determined" },
+    { label: "File Format:", value: dataset?.raw_file ? dataset.raw_file.split('.').pop()?.toUpperCase() || "Unknown" : "Unknown" },
+    // { 
+    //   label: "Schema:", 
+    //   value: "Schema information will be populated after file processing" 
+    // },
+    { label: "Storage Location:", value: dataset?.raw_file ? "Cloud Storage" : "Unknown" },
+    // { label: "Associated Asset:", value: dataset?.business_domain || "Unknown" },
+    // { label: "KPI Linkages:", value: "To be configured" },
+    { label: "Reporting Use:", value: dataset?.description || "No reporting use defined" },
+    // { label: "Related Datasets:", value: "No related datasets configured" }
   ];
 
   return (

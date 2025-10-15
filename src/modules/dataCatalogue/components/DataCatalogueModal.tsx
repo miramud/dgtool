@@ -10,7 +10,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { DataCatalogue, DataCatalogueFormData, createDataCatalogueSchema } from "../types/dataCatalogue";
-import { useState, useEffect } from "react";
+import { useGetMetadataTemplates, useGetDatasetTypes, useCreateDataCatalogue, CreateDatasetFormData } from "../controllers/dataCatalogueController";
+import { useState, useEffect, useRef } from "react";
+import { useCentrifugo } from "@/hooks/useCentrifugo";
+import { Progress } from "@/components/ui/progress";
 
 interface DataCatalogueModalProps {
   open: boolean;
@@ -26,41 +29,122 @@ export default function DataCatalogueModal({
   const isEdit = !!dataCatalogue;
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStatus, setUploadStatus] = useState<'idle' | 'preparing' | 'uploading' | 'processing' | 'completed' | 'error'>('idle');
+  const [uploadMessage, setUploadMessage] = useState('');
+  const [processingResults, setProcessingResults] = useState<{
+    totalRows?: number;
+    rowsCleaned?: number;
+  }>({});
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const form = useForm<DataCatalogueFormData>({
     resolver: zodResolver(createDataCatalogueSchema),
     defaultValues: {
-      datasetName: dataCatalogue?.businessTechnicalSpecification || "",
-      businessDomain: dataCatalogue?.businessDescription || "",
+      name: dataCatalogue?.businessTechnicalSpecification || "",
+      business_domain: dataCatalogue?.businessDescription || "",
       tags: dataCatalogue?.tags?.join(", ") || "",
-      sensitivity: "",
+      sensitivity: "INTERNAL",
       description: dataCatalogue?.usageGuidelines || "",
-      datasetType: dataCatalogue?.dataSource || "",
+      raw_file: "",
+      dataset_type: "",
+      metadata_template: "",
     },
+  });
+
+  // Watch dataset type to conditionally fetch templates
+  const selectedDatasetType = form.watch('dataset_type');
+  
+  // Get dataset types and templates
+  const { data: datasetTypes, isLoading: isLoadingDatasetTypes } = useGetDatasetTypes();
+  const { data: metadataTemplates, isLoading: isLoadingTemplates } = useGetMetadataTemplates(selectedDatasetType);
+  
+  // Create dataset hook
+  const { createDataCatalogue, isLoading: isCreatingDataset } = useCreateDataCatalogue();
+
+  // Centrifugo WebSocket connection
+  const { connect, disconnect, subscribeToChannel } = useCentrifugo({
+    url: process.env.NEXT_PUBLIC_CENTRIFUGO_WS_URL || 'wss://centrifugo-v5-zkss.onrender.com/connection/websocket',
+    onProgress: (progress) => {
+      setUploadProgress(progress.percentage);
+      setUploadStatus(progress.status);
+      setUploadMessage(progress.message || '');
+    },
+    onDatasetProcessed: async (data: any) => {
+      // Handle dataset processing completion
+      console.log('Processing completed with data:', data);
+      
+      try {
+        // For now, set what we have from Centrifugo
+        setProcessingResults({
+          totalRows: data.total_rows,
+          rowsCleaned: data.rows_cleaned,
+        });
+        
+        // TODO: If we need fields count, we could fetch dataset details here
+        // using data.dataset_id to get more detailed information
+        
+        setUploadStatus('completed');
+        setUploadProgress(100);
+      } catch (error) {
+        console.error('Error processing dataset completion:', error);
+      }
+    }
   });
 
   // Reset form when dataCatalogue changes
   useEffect(() => {
     if (dataCatalogue) {
       form.reset({
-        datasetName: dataCatalogue.businessTechnicalSpecification || "",
-        businessDomain: dataCatalogue.businessDescription || "",
+        name: dataCatalogue.businessTechnicalSpecification || "",
+        business_domain: dataCatalogue.businessDescription || "",
         tags: dataCatalogue.tags?.join(", ") || "",
-        sensitivity: "",
+        sensitivity: "INTERNAL",
         description: dataCatalogue.usageGuidelines || "",
-        datasetType: dataCatalogue.dataSource || "",
+        raw_file: "",
+        metadata_template: "",
       });
     } else {
       form.reset({
-        datasetName: "",
-        businessDomain: "",
+        name: "",
+        business_domain: "",
         tags: "",
-        sensitivity: "",
+        sensitivity: "INTERNAL",
         description: "",
-        datasetType: "",
+        raw_file: "",
+        dataset_type: "",
+        metadata_template: "",
       });
     }
   }, [dataCatalogue, form]);
+
+  // File selection handlers
+  const handleFileSelect = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      // Set the file name in the form for display purposes
+      form.setValue('raw_file', file.name);
+      // Auto-advance to next step after a short delay
+      setTimeout(() => {
+        setCurrentStep(1);
+      }, 500);
+    }
+  };
+
+  const handleFileRemove = () => {
+    setSelectedFile(null);
+    form.setValue('raw_file', '');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   const metadataStep = {
     id: "metadata",
@@ -70,12 +154,12 @@ export default function DataCatalogueModal({
           <h2 className="text-xl font-semibold mb-6">{isEdit ? "Edit Basic Metadata" : "Enter Basic Metadata"}</h2>
           <div className="grid grid-cols-2 gap-4">
             <FormInput
-              name="datasetName"
+              name="name"
               label="Dataset Name"
               placeholder="Enter dataset's name"
             />
             <FormSelect
-              name="businessDomain"
+              name="business_domain"
               label="Business Domain"
               placeholder="Select business's domain"
               options={[
@@ -85,25 +169,19 @@ export default function DataCatalogueModal({
                 { value: "marketing", label: "Marketing" },
               ]}
             />
-            <FormSelect
+            <FormInput
               name="tags"
               label="Tags"
-              placeholder="Select Tags"
-              options={[
-                { value: "production", label: "Production" },
-                { value: "seismic", label: "Seismic" },
-                { value: "reservoir", label: "Reservoir" },
-              ]}
+              placeholder="Enter tags (comma separated)"
             />
             <FormSelect
               name="sensitivity"
               label="Dataset Sensitivity"
               placeholder="Select Data's sensitivity"
               options={[
-                { value: "public", label: "Public" },
-                { value: "internal", label: "Internal" },
-                { value: "confidential", label: "Confidential" },
-                { value: "restricted", label: "Restricted" },
+                { value: "INTERNAL", label: "Internal" },
+                { value: "EXTERNAL", label: "External" },
+                { value: "PRIVATE", label: "PRIVATE" },
               ]}
             />
           </div>
@@ -127,18 +205,54 @@ export default function DataCatalogueModal({
       content: (
         <div>
           <h2 className="text-xl font-semibold mb-4">Upload File</h2>
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center">
-            <p className="text-gray-600 mb-2">Choose a File or drag and drop it here (2MB)</p>
-            <p className="text-gray-500 text-sm mb-4">PDF, DOCX, XLSX</p>
-            <button className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-              </svg>
-              Select File
-            </button>
-          </div>
+          
+          {!selectedFile ? (
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center">
+              <p className="text-gray-600 mb-2">Choose a File or drag and drop it here (2MB)</p>
+              <p className="text-gray-500 text-sm mb-4">PDF, DOCX, XLSX, CSV</p>
+              <button 
+                onClick={handleFileSelect}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                </svg>
+                Select File
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                onChange={handleFileChange}
+                accept=".pdf,.docx,.xlsx,.csv"
+                className="hidden"
+              />
+            </div>
+          ) : (
+            <div className="border border-gray-300 rounded-lg p-4 bg-gray-50">
+              <div className="flex items-center">
+                <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center mr-3">
+                  <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium">{selectedFile.name}</p>
+                  <p className="text-sm text-gray-600">Selected successfully</p>
+                </div>
+                <button 
+                  onClick={handleFileRemove}
+                  className="ml-auto text-red-500 hover:text-red-700"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       ),
+      isValid: !!selectedFile,
     },
     {
       id: "dataset-type",
@@ -149,64 +263,210 @@ export default function DataCatalogueModal({
           <p className="text-gray-600 mb-6">Please select the dataset type. This determines which metadata fields will be required.</p>
           
           <div className="mb-6">
-            <h3 className="font-medium mb-2">Upload File</h3>
-            <div className="border border-gray-300 rounded-lg p-4 bg-gray-50">
-              <div className="flex items-center">
-                <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center mr-3">
-                  <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
+            <h3 className="font-medium mb-2">Uploaded File</h3>
+            {selectedFile ? (
+              <div className="border border-gray-300 rounded-lg p-4 bg-gray-50">
+                <div className="flex items-center">
+                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center mr-3">
+                    <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium">{selectedFile.name}</p>
+                    <p className="text-sm text-gray-600">Selected</p>
+                  </div>
+                  <button 
+                    onClick={handleFileRemove}
+                    className="ml-auto text-red-500 hover:text-red-700"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
                 </div>
-                <div>
-                  <p className="font-medium">employee_data_q2_2025.csv</p>
-                  <p className="text-sm text-gray-600">Uploaded</p>
-                </div>
-                <button className="ml-auto text-red-500 hover:text-red-700">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
               </div>
-            </div>
+            ) : (
+              <div className="border border-gray-300 rounded-lg p-4 bg-red-50">
+                <p className="text-red-600">No file selected. Please go back to select a file.</p>
+              </div>
+            )}
           </div>
 
           <Form {...form}>
-            <FormSelect
-              name="datasetType"
-              label="Select Dataset Type"
-              placeholder="Select a dataset type"
-              options={[
-                { value: "customer", label: "Customer Data" },
-                { value: "employee", label: "Employee Data" },
-                { value: "financial", label: "Financial Data" },
-                { value: "operational", label: "Operational Data" },
-              ]}
-            />
+            <div className="space-y-4">
+              <FormSelect
+                name="dataset_type"
+                label="Select Dataset Type"
+                placeholder="Select a dataset type"
+                isLoading={isLoadingDatasetTypes}
+                emptyMessage="No dataset types available"
+                options={
+                  Array.isArray(datasetTypes) 
+                    ? datasetTypes.map((type: any) => ({
+                        value: type.id,
+                        label: type.name,
+                      }))
+                    : []
+                }
+              />
+              
+              {selectedDatasetType && (
+                <FormSelect
+                  name="metadata_template"
+                  label="Select Template"
+                  placeholder="Select a template"
+                  isLoading={isLoadingTemplates}
+                  emptyMessage="No templates available for this dataset type"
+                  options={
+                    Array.isArray(metadataTemplates) 
+                      ? metadataTemplates.map((template: any) => ({
+                          value: template.id,
+                          label: template.name,
+                        }))
+                      : []
+                  }
+                />
+              )}
+            </div>
           </Form>
         </div>
       ),
+      isValid: !!selectedFile && !!selectedDatasetType && (
+        !!form.watch('metadata_template') || 
+        (Array.isArray(metadataTemplates) && metadataTemplates.length === 0)
+      ),
     },
-    metadataStep,
+    {
+      ...metadataStep,
+      isValid: () => {
+        // Use watch to make validation reactive to form changes
+        const name = form.watch('name');
+        const business_domain = form.watch('business_domain');
+        const description = form.watch('description');
+        const sensitivity = form.watch('sensitivity');
+        const dataset_type = form.watch('dataset_type');
+        const raw_file = form.watch('raw_file');
+        
+        return !!(name && business_domain && description && sensitivity && dataset_type && raw_file);
+      },
+    },
   ];
 
   // Use only metadata step for edit mode, all steps for create mode
   const steps = isEdit ? [metadataStep] : allSteps;
 
-  const handleComplete = () => {
-    setShowSuccessModal(true);
+  const handleComplete = async () => {
+    try {
+      const formValues = form.getValues();
+      
+      if (!selectedFile) {
+        console.error("No file selected");
+        return;
+      }
+
+      // Initialize upload progress
+      setUploadStatus('preparing');
+      setUploadProgress(0);
+      
+      // Connect to Centrifugo
+      connect();
+
+      const submitData: CreateDatasetFormData = {
+        name: formValues.name,
+        description: formValues.description,
+        business_domain: formValues.business_domain,
+        sensitivity: formValues.sensitivity,
+        tags: formValues.tags,
+        raw_file: selectedFile,
+        dataset_type: formValues.dataset_type,
+        metadata_template: formValues.metadata_template,
+      };
+
+      const response = await createDataCatalogue(submitData);
+      
+      // Get the reference ID from the response to subscribe to the channel
+      // The response structure might be in different places depending on API
+      const datasetRef = (response as any)?.data?.data?.reference || 
+                        (response as any)?.data?.reference ||
+                        (response as any)?.reference;
+      if (datasetRef) {
+        subscribeToChannel(`dataset:${datasetRef}`);
+      } else {
+        console.warn('No dataset reference found in response:', response);
+      }
+
+      setShowSuccessModal(true);
+    } catch (error) {
+      console.error("Error creating dataset:", error);
+      setUploadStatus('error');
+      setUploadMessage('Upload failed. Please try again.');
+    }
   };
 
   const handleCancel = () => {
+    if (uploadStatus === 'preparing' || uploadStatus === 'uploading' || uploadStatus === 'processing') {
+      // Don't allow cancel during active upload/processing
+      return;
+    }
     setShowCancelModal(true);
   };
 
   const handleSuccessClose = () => {
     setShowSuccessModal(false);
+    // Reset file state
+    setSelectedFile(null);
+    setCurrentStep(0);
+    // Reset upload state
+    setUploadProgress(0);
+    setUploadStatus('idle');
+    setUploadMessage('');
+    setProcessingResults({});
+    // Reset form to initial state
+    form.reset({
+      name: "",
+      business_domain: "",
+      tags: "",
+      sensitivity: "INTERNAL",
+      description: "",
+      raw_file: "",
+      dataset_type: "",
+      metadata_template: "",
+    });
+    // Disconnect from WebSocket
+    disconnect();
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
     onOpenChange(false);
   };
 
   const handleCancelConfirm = () => {
     setShowCancelModal(false);
+    // Reset file state
+    setSelectedFile(null);
+    setCurrentStep(0);
+    // Reset upload state
+    setUploadProgress(0);
+    setUploadStatus('idle');
+    setUploadMessage('');
+    setProcessingResults({});
+    // Reset form to initial state
+    form.reset({
+      name: "",
+      business_domain: "",
+      tags: "",
+      sensitivity: "INTERNAL",
+      description: "",
+      raw_file: "",
+      dataset_type: "",
+      metadata_template: "",
+    });
+    // Disconnect from WebSocket
+    disconnect();
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
     onOpenChange(false);
   };
 
@@ -218,70 +478,136 @@ export default function DataCatalogueModal({
     <>
       <MultiStepDialog
         open={open && !showSuccessModal && !showCancelModal}
-        onOpenChange={handleCancel}
+        onOpenChange={uploadStatus === 'idle' ? handleCancel : () => {}}
         steps={steps}
         onComplete={handleComplete}
-        finalButtonLabel="Save Dataset"
+        finalButtonLabel={uploadStatus === 'idle' ? "Save Dataset" : "Processing..."}
+        isLoading={isCreatingDataset || uploadStatus !== 'idle'}
         hideStepIndicator={isEdit}
+        currentStep={currentStep}
+        onStepChange={setCurrentStep}
       />
 
-      {/* Success Modal */}
-      <Dialog open={showSuccessModal} onOpenChange={handleSuccessClose}>
+      {/* Success Modal with Upload Progress */}
+      <Dialog open={showSuccessModal} onOpenChange={uploadStatus === 'completed' ? handleSuccessClose : () => {}}>
         <DialogContent className="max-w-2xl">
           <div className="p-8">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <h2 className="text-[24px] font-semibold text-gray-900">Dataset saved successfully</h2>
-            </div>
-
-            <p className="text-[16px] text-gray-600 mb-8">
-              Dataset Employee Payroll Data – Q2 2025 uploaded successfully.
-            </p>
-
-            <div className="grid grid-cols-2 gap-6 mb-8">
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-gray-500 text-sm font-medium mb-2">Records detected</h3>
-                      <p className="text-4xl font-bold text-gray-900">2450</p>
-                    </div>
-                    <div className="text-gray-400">
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6h.01M12 12h.01M12 18h.01" />
-                      </svg>
-                    </div>
+            {uploadStatus === 'completed' ? (
+              // Success content
+              <>
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
+                    <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
                   </div>
-                </CardContent>
-              </Card>
+                  <h2 className="text-[24px] font-semibold text-gray-900">Dataset processed successfully</h2>
+                </div>
 
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-gray-500 text-sm font-medium mb-2">Fields detected</h3>
-                      <p className="text-4xl font-bold text-gray-900">12</p>
-                    </div>
-                    <div className="text-gray-400">
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6h.01M12 12h.01M12 18h.01" />
+                <p className="text-[16px] text-gray-600 mb-8">
+                  Dataset {form.watch('name')} uploaded and processed successfully.
+                </p>
+
+                <div className="grid grid-cols-2 gap-6 mb-8">
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-gray-500 text-sm font-medium mb-2">Records detected</h3>
+                          <p className="text-4xl font-bold text-gray-900">{processingResults.totalRows ?? '--'}</p>
+                        </div>
+                        <div className="text-gray-400">
+                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6h.01M12 12h.01M12 18h.01" />
+                          </svg>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-gray-500 text-sm font-medium mb-2">Fields detected</h3>
+                          <p className="text-4xl font-bold text-gray-900">{processingResults.rowsCleaned ?? '--'}</p>
+                        </div>
+                        <div className="text-gray-400">
+                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6h.01M12 12h.01M12 18h.01" />
+                          </svg>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Button 
+                  onClick={handleSuccessClose}
+                  className="w-full bg-[#4A4A7A] hover:bg-[#3A3A6A] text-white font-medium"
+                >
+                  Go to Dataset
+                </Button>
+              </>
+            ) : (
+              // Upload progress content
+              <>
+                <div className="flex items-center gap-4 mb-6">
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                    uploadStatus === 'error' ? 'bg-red-500' : 'bg-[#3A3A6A]'
+                  }`}>
+                    {uploadStatus === 'error' ? (
+                      <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                       </svg>
-                    </div>
+                    ) : (
+                      <svg className="w-6 h-6 text-white animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25"></circle>
+                        <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" className="opacity-75"></path>
+                      </svg>
+                    )}
                   </div>
-                </CardContent>
-              </Card>
-            </div>
+                  <h2 className="text-[24px] font-semibold text-gray-900">
+                    {uploadStatus === 'error' ? 'Upload Failed' : 'Processing Dataset...'}
+                  </h2>
+                </div>
 
-            <Button 
-              onClick={handleSuccessClose}
-              className="w-full bg-[#4A4A7A] hover:bg-[#3A3A6A] text-white font-medium"
-            >
-              Go to Dataset
-            </Button>
+                <p className="text-[16px] text-gray-600 mb-6">
+                  {uploadMessage || 'Please wait while we process your dataset.'}
+                </p>
+
+                <div className="mb-8">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium text-gray-700">
+                      {uploadStatus === 'preparing' && 'Preparing upload...'}
+                      {uploadStatus === 'uploading' && 'Uploading file...'}
+                      {uploadStatus === 'processing' && 'Processing data...'}
+                      {uploadStatus === 'error' && 'Upload failed'}
+                    </span>
+                    <span className="text-sm text-gray-500">{uploadProgress}%</span>
+                  </div>
+                  <Progress value={uploadProgress} className="w-full" />
+                </div>
+
+                {uploadStatus === 'error' && (
+                  <div className="flex gap-4">
+                    <Button 
+                      onClick={handleSuccessClose}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      Close
+                    </Button>
+                    <Button 
+                      onClick={handleComplete}
+                      className="flex-1 bg-[#4A4A7A] hover:bg-[#3A3A6A] text-white"
+                    >
+                      Try Again
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </DialogContent>
       </Dialog>

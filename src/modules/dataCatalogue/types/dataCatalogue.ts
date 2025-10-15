@@ -2,14 +2,18 @@ import { z } from "zod";
 
 export interface DataCatalogue {
     id: string;
+    name: string;
+    description: string;
+    dataset_type: string;
     businessTechnicalSpecification: BusinessTechnicalSpecification;
+    sensitivity: string;
     businessDescription: BusinessDescription;
     usageGuidelines: UsageGuidelines;
     tags: string[];
     date: string;
     dataSource: DataSource;
-    createdAt: string;
-    updatedAt: string;
+    created_datetime: string;
+    updated_datetime: string;
 }
 
 
@@ -36,6 +40,7 @@ export enum UsageGuidelines {
 export enum DataSource {
     INTERNAL = "Internal",
     EXTERNAL = "External",
+    PRIVATE = "Private",
 }
 
 export enum DataCatalogueStatus {
@@ -46,12 +51,14 @@ export enum DataCatalogueStatus {
 }
 
 export const createDataCatalogueSchema = z.object({
-    datasetName: z.string().min(1, "Dataset name is required"),
-    businessDomain: z.string().min(1, "Business domain is required"),
+    name: z.string().min(1, "Dataset name is required"),
+    business_domain: z.string().min(1, "Business domain is required"),
     tags: z.string().min(1, "Tags are required"),
-    sensitivity: z.string().min(1, "Sensitivity level is required"),
+    sensitivity: z.enum(["INTERNAL", "EXTERNAL", "PRIVATE"]),
     description: z.string().min(1, "Description is required"),
-    datasetType: z.string().min(1, "Dataset type is required"),
+    raw_file: z.string().min(1, "File is required"),
+    dataset_type: z.string().min(1, "Dataset type is required"),
+    metadata_template: z.string().optional(),
 });
 
 export type DataCatalogueFormData = z.infer<typeof createDataCatalogueSchema>;
