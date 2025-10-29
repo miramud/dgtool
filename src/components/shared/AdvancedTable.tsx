@@ -31,6 +31,7 @@ interface AdvancedTableProps {
   options?: TableOption[];
   getFormattedValue: (item: any, columnKey: string) => React.ReactNode;
   onRowSelect?: (selectedItems: any[]) => void;
+  onRowClick?: (item: any) => void;
   className?: string;
 }
 
@@ -42,6 +43,7 @@ export default function AdvancedTable({
   options = [],
   getFormattedValue,
   onRowSelect,
+  onRowClick,
   className,
 }: AdvancedTableProps) {
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
@@ -89,7 +91,7 @@ export default function AdvancedTable({
             <tr>
               {columns.map((column, index) => (
                 <th
-                  key={column.key}
+                  key={index}
                   className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'
                   style={{ width: column.width }}
                 >
@@ -116,17 +118,25 @@ export default function AdvancedTable({
           <tbody className='bg-white divide-y divide-gray-200'>
             {data.length > 0 ? (
               data.map((item, rowIndex) => (
-                <tr key={rowIndex} className='hover:bg-gray-50'>
+                <tr
+                  key={rowIndex}
+                  className='hover:bg-gray-50'
+                  onClick={() => onRowClick?.(item)}
+                  style={{ cursor: onRowClick ? "pointer" : "default" }}
+                >
                   {columns.map((column, colIndex) => (
                     <td
-                      key={column.key}
+                      key={colIndex}
                       className='px-6 py-4 whitespace-nowrap text-sm text-gray-900'
                     >
                       <div className='flex items-center gap-3'>
                         {colIndex === 0 && showCheckBox && (
                           <Checkbox
                             checked={selectedRows.includes(rowIndex)}
-                            onCheckedChange={() => toggleRow(rowIndex)}
+                            onClick={(e) => e.stopPropagation()}
+                            onCheckedChange={() => {
+                              toggleRow(rowIndex);
+                            }}
                           />
                         )}
                         {getFormattedValue(item, column.key)}
@@ -147,7 +157,9 @@ export default function AdvancedTable({
                               key={index}
                               onClick={() => option.action(item)}
                             >
-                              {typeof option.label === 'function' ? option.label(item) : option.label}
+                              {typeof option.label === "function"
+                                ? option.label(item)
+                                : option.label}
                             </DropdownMenuItem>
                           ))}
                         </DropdownMenuContent>

@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 import {
   // LayoutDashboard,
   Database,
-  BarChart3,
   Users,
   Shield,
   Settings,
@@ -13,6 +12,7 @@ import {
   ChevronRight,
   ChevronDown,
   Grid3X3,
+  Notebook,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -50,11 +50,11 @@ const mainNavItems: NavItem[] = [
       { title: "Dataset Types", href: "/dashboard/dataset-types" },
     ],
   },
-  {
-    title: "Data Quality",
-    href: "/dashboard/data-quality",
-    icon: BarChart3,
-  },
+  // {
+  //   title: "Data Quality",
+  //   href: "/dashboard/data-quality",
+  //   icon: BarChart3,
+  // },
   {
     title: "Data Stewardship & Ownership",
     href: "/dashboard/data-stewardship",
@@ -76,6 +76,13 @@ const mainNavItems: NavItem[] = [
     href: "/dashboard/workflow",
     icon: Settings,
     hasDropdown: true,
+    subItems: [],
+  },
+  {
+    title: "Policy & Standards",
+    href: "/dashboard/policy-and-standards",
+    icon: Notebook,
+    hasDropdown: false,
     subItems: [],
   },
 ];
