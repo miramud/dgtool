@@ -36,3 +36,16 @@ export const DATASET_TYPE_ROUTES = {
   ARCHIVE: (id: string) => `${DATASET_TYPE_API_ROUTES.BASE}/${id}/archive`,
   UNARCHIVE: (id: string) => `${DATASET_TYPE_API_ROUTES.BASE}/${id}/unarchive`,
 };
+
+export enum POLICIES_API_ROUTES {
+  BASE = "/policies",
+}
+
+export const POLICIES_ROUTES = {
+  LIST: POLICIES_API_ROUTES.BASE,
+  CREATE: POLICIES_API_ROUTES.BASE,
+  GET_BY_ID: (id: string) => `${POLICIES_API_ROUTES.BASE}/${id}`,
+  UPDATE: (id: string) => `${POLICIES_API_ROUTES.BASE}/${id}`,
+  PARTIAL_UPDATE: (id: string) => `${POLICIES_API_ROUTES.BASE}/${id}`,
+  DELETE: (id: string) => `${POLICIES_API_ROUTES.BASE}/${id}`,
+};

@@ -7,7 +7,7 @@ import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import StatusBadge from "@/components/shared/StatusBadge";
-import { useGetDataCatalogueById } from "../controllers/dataCatalogueController";
+import { useGetDataGovernorById } from "../controllers/dataGovernanceController";
 
 // Tab content components
 
@@ -23,11 +23,7 @@ export default function DataSetAssignmentView({
   const router = useRouter();
 
   // Fetch dataset data
-  const {
-    data: dataset,
-    isLoading,
-    error,
-  } = useGetDataCatalogueById(datasetId);
+  const { data: dataset, isLoading, error } = useGetDataGovernorById(datasetId);
 
   const handleGoBack = () => {
     router.back();
@@ -91,7 +87,7 @@ export default function DataSetAssignmentView({
               <h3 className='text-sm font-medium text-gray-600'>
                 Dataset Name
               </h3>
-              <p className='text-sm text-gray-900'>{dataset.name}</p>
+              <p className='text-sm text-gray-900'>{dataset.dataset?.name}</p>
             </div>
           </CardContent>
         </Card>
@@ -101,7 +97,7 @@ export default function DataSetAssignmentView({
           <CardContent className='py-4'>
             <div className='space-y-1'>
               <h3 className='text-sm font-medium text-gray-600'>Dataset ID</h3>
-              <p className='text-sm text-gray-900'>{dataset.id}</p>
+              <p className='text-sm text-gray-900'>{dataset.dataset?.id}</p>
             </div>
           </CardContent>
         </Card>
@@ -112,10 +108,12 @@ export default function DataSetAssignmentView({
             <div className='space-y-2'>
               <h3 className='text-sm font-medium text-gray-600'>Tags</h3>
               <div className='flex flex-wrap gap-1'>
-                {(Array.isArray(dataset.tags)
-                  ? dataset.tags
-                  : typeof dataset.tags === "string"
-                  ? dataset.tags.split(",").map((tag: string) => tag.trim())
+                {(Array.isArray(dataset.dataset?.tags)
+                  ? dataset.dataset.tags
+                  : typeof dataset.dataset?.tags === "string"
+                  ? dataset.dataset.tags
+                      .split(",")
+                      .map((tag: string) => tag.trim())
                   : []
                 ).map((tag: string, index: number) => (
                   <StatusBadge
@@ -137,7 +135,9 @@ export default function DataSetAssignmentView({
               <h3 className='text-sm font-medium text-gray-600'>
                 Security Classifications
               </h3>
-              <p className='text-sm text-gray-900'>{dataset.sensitivity}</p>
+              <p className='text-sm text-gray-900'>
+                {dataset.dataset?.sensitivity}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -151,33 +151,9 @@ export default function DataSetAssignmentView({
         <div className='space-y-4'>
           <h3 className='text-lg font-medium text-gray-800'>Data Owners</h3>
           <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-            {/* Mock data owners - replace with actual API data */}
-            {[
-              {
-                id: "1",
-                name: "John Smith",
-                role: "Data Manager",
-                email: "john.smith@company.com",
-                department: "Finance",
-                status: "Active",
-              },
-              {
-                id: "2",
-                name: "Sarah Johnson",
-                role: "Analytics Lead",
-                email: "sarah.johnson@company.com",
-                department: "Operations",
-                status: "Active",
-              },
-              {
-                id: "3",
-                name: "Michael Brown",
-                role: "IT Director",
-                email: "michael.brown@company.com",
-                department: "IT",
-                status: "Inactive",
-              },
-            ].map((owner) => (
+            {/*  eslint-disable-next-line @typescript-eslint/ban-ts-comment  */}
+            {/*  @ts-ignore  */}
+            {dataset.owners?.map((owner) => (
               <Card
                 key={owner.id}
                 className='border border-gray-200 hover:shadow-md transition-shadow'
@@ -187,24 +163,26 @@ export default function DataSetAssignmentView({
                     <div className='flex items-start justify-between'>
                       <div>
                         <h4 className='font-semibold text-gray-900'>
-                          {owner.name}
+                          {owner.user.first_name} {owner.user.last_name}
                         </h4>
-                        <p className='text-sm text-gray-600'>{owner.role}</p>
+                        <p className='text-sm text-gray-600'>Data Owner</p>
                       </div>
                       <StatusBadge
-                        status={owner.status}
+                        status={owner.is_eligible ? "Active" : "Inactive"}
                         variant='default'
                         className={
-                          owner.status === "Active"
+                          owner.is_eligible
                             ? "bg-green-100 text-green-800"
                             : "bg-gray-100 text-gray-600"
                         }
                       />
                     </div>
                     <div className='space-y-1'>
-                      <p className='text-sm text-gray-700'>{owner.email}</p>
+                      <p className='text-sm text-gray-700'>
+                        {owner.user.email}
+                      </p>
                       <p className='text-xs text-gray-500'>
-                        {owner.department} Department
+                        {owner.user.mobile_number}
                       </p>
                     </div>
                   </div>
@@ -218,49 +196,9 @@ export default function DataSetAssignmentView({
         <div className='space-y-4'>
           <h3 className='text-lg font-medium text-gray-800'>Data Stewards</h3>
           <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-            {/* Mock data stewards - replace with actual API data */}
-            {[
-              {
-                id: "1",
-                name: "Alice Cooper",
-                role: "Data Analyst",
-                email: "alice.cooper@company.com",
-                department: "Analytics",
-                status: "Active",
-              },
-              {
-                id: "2",
-                name: "Bob Martinez",
-                role: "Business Analyst",
-                email: "bob.martinez@company.com",
-                department: "Business Intelligence",
-                status: "Active",
-              },
-              {
-                id: "3",
-                name: "Carol White",
-                role: "Data Scientist",
-                email: "carol.white@company.com",
-                department: "Research",
-                status: "Active",
-              },
-              {
-                id: "4",
-                name: "Daniel Lee",
-                role: "System Administrator",
-                email: "daniel.lee@company.com",
-                department: "IT",
-                status: "Inactive",
-              },
-              {
-                id: "5",
-                name: "Eva Rodriguez",
-                role: "Quality Analyst",
-                email: "eva.rodriguez@company.com",
-                department: "Quality Assurance",
-                status: "Active",
-              },
-            ].map((steward) => (
+            {/*  eslint-disable-next-line @typescript-eslint/ban-ts-comment  */}
+            {/*  @ts-ignore  */}
+            {dataset.stewards?.map((steward) => (
               <Card
                 key={steward.id}
                 className='border border-gray-200 hover:shadow-md transition-shadow'
@@ -270,24 +208,26 @@ export default function DataSetAssignmentView({
                     <div className='flex items-start justify-between'>
                       <div>
                         <h4 className='font-semibold text-gray-900'>
-                          {steward.name}
+                          {steward.user.first_name} {steward.user.last_name}
                         </h4>
-                        <p className='text-sm text-gray-600'>{steward.role}</p>
+                        <p className='text-sm text-gray-600'>Data Steward</p>
                       </div>
                       <StatusBadge
-                        status={steward.status}
+                        status={steward.is_eligible ? "Active" : "Inactive"}
                         variant='default'
                         className={
-                          steward.status === "Active"
+                          steward.is_eligible
                             ? "bg-green-100 text-green-800"
                             : "bg-gray-100 text-gray-600"
                         }
                       />
                     </div>
                     <div className='space-y-1'>
-                      <p className='text-sm text-gray-700'>{steward.email}</p>
+                      <p className='text-sm text-gray-700'>
+                        {steward.user.email}
+                      </p>
                       <p className='text-xs text-gray-500'>
-                        {steward.department} Department
+                        {steward.user.mobile_number}
                       </p>
                     </div>
                   </div>

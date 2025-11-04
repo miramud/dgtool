@@ -96,6 +96,8 @@ function CreateMetadataTemplateModal({
   const [fields, setFields] = useState<Omit<MetadataField, "id">[]>(
     template?.fields?.map((f) => ({ ...f, id: undefined })) || []
   );
+  const [uniqueTogetherFields, setUniqueTogetherFields] = useState<string[]>([]);
+  const [showUniqueTogetherDropdown, setShowUniqueTogetherDropdown] = useState(false);
   const [showAddField, setShowAddField] = useState(false);
 
   // Field form state
@@ -128,6 +130,8 @@ function CreateMetadataTemplateModal({
       setFields(
         templateData.fields?.map((f) => ({ ...f, id: undefined })) || []
       );
+      // Set unique together fields if they exist
+      setUniqueTogetherFields(templateData.unique_together_fields || []);
     } else if (!template) {
       // Reset form when no template (create mode)
       setTemplateName("");
@@ -142,6 +146,8 @@ function CreateMetadataTemplateModal({
     setDescription("");
     setDatasetType("");
     setFields([]);
+    setUniqueTogetherFields([]);
+    setShowUniqueTogetherDropdown(false);
     setShowAddField(false);
     resetFieldForm();
   };
@@ -152,16 +158,19 @@ function CreateMetadataTemplateModal({
       if (showFieldAttributeDropdown) {
         setShowFieldAttributeDropdown(false);
       }
+      if (showUniqueTogetherDropdown) {
+        setShowUniqueTogetherDropdown(false);
+      }
     };
 
-    if (showFieldAttributeDropdown) {
+    if (showFieldAttributeDropdown || showUniqueTogetherDropdown) {
       document.addEventListener("click", handleClickOutside);
     }
 
     return () => {
       document.removeEventListener("click", handleClickOutside);
     };
-  }, [showFieldAttributeDropdown]);
+  }, [showFieldAttributeDropdown, showUniqueTogetherDropdown]);
 
   const resetFieldForm = () => {
     setFieldName("");
@@ -203,7 +212,12 @@ function CreateMetadataTemplateModal({
   };
 
   const handleRemoveField = (index: number) => {
+    const fieldToRemove = fields[index];
     setFields(fields.filter((_, i) => i !== index));
+    // Remove from unique together fields if present
+    setUniqueTogetherFields((prev) => 
+      prev.filter((fieldName) => fieldName !== fieldToRemove.field_name)
+    );
   };
 
   const handleSave = async () => {
@@ -228,6 +242,7 @@ function CreateMetadataTemplateModal({
         is_active: true,
         dataset_type: selectedDatasetType.id,
         fields: fields.map(convertFieldToApi),
+        unique_together_fields: uniqueTogetherFields,
       };
       // console.log({ apiPayload });
 
@@ -323,6 +338,7 @@ function CreateMetadataTemplateModal({
               />
             </div>
           </div>
+
 
           {/* Fields Section */}
           <div>
@@ -547,7 +563,7 @@ function CreateMetadataTemplateModal({
                         placeholder='Add option'
                         value={newOption}
                         onChange={(e) => setNewOption(e.target.value)}
-                        onKeyPress={(e) =>
+                        onKeyDown={(e) =>
                           e.key === "Enter" && handleAddOption()
                         }
                       />
@@ -619,6 +635,96 @@ function CreateMetadataTemplateModal({
               </div>
             )}
           </div>
+
+          {/* Unique Together Fields Section */}
+          {fields.length > 0 && (
+            <div>
+              <div className='space-y-2'>
+                <Label htmlFor='uniqueTogetherFields'>
+                  Select fields that must be unique together
+                </Label>
+                <div className='relative'>
+                  <div
+                    className='flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background cursor-pointer hover:bg-accent'
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setShowUniqueTogetherDropdown(!showUniqueTogetherDropdown);
+                    }}
+                  >
+                    <div className='flex flex-wrap gap-1 flex-1'>
+                      {uniqueTogetherFields.length === 0 ? (
+                        <span className='text-muted-foreground'>
+                          Select fields for unique constraint
+                        </span>
+                      ) : (
+                        <span className='text-sm'>
+                          {uniqueTogetherFields.length} field
+                          {uniqueTogetherFields.length !== 1 ? "s" : ""} selected
+                        </span>
+                      )}
+                    </div>
+                    <ChevronDown className='h-4 w-4 opacity-50' />
+                  </div>
+
+                  {showUniqueTogetherDropdown && (
+                    <div className='absolute z-[9999] w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto'>
+                      {fields.map((field, index) => (
+                        <div
+                          key={index}
+                          className='flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer'
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setUniqueTogetherFields((prev) =>
+                              prev.includes(field.field_name)
+                                ? prev.filter((f) => f !== field.field_name)
+                                : [...prev, field.field_name]
+                            );
+                          }}
+                        >
+                          <div className='w-4 h-4 flex items-center justify-center'>
+                            {uniqueTogetherFields.includes(field.field_name) && (
+                              <Check className='w-4 h-4 text-blue-600' />
+                            )}
+                          </div>
+                          {field.field_name} ({field.field_type})
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Selected unique together fields display */}
+                {uniqueTogetherFields.length > 0 && (
+                  <div className='flex flex-wrap gap-2 mt-2'>
+                    {uniqueTogetherFields.map((fieldName) => {
+                      const field = fields.find((f) => f.field_name === fieldName);
+                      return (
+                        <div
+                          key={fieldName}
+                          className='flex items-center gap-1 bg-green-100 text-green-800 border border-green-200 rounded px-2 py-1 text-sm'
+                        >
+                          {fieldName} ({field?.field_type})
+                          <X
+                            className='w-3 h-3 cursor-pointer hover:text-red-600'
+                            onClick={() =>
+                              setUniqueTogetherFields((prev) =>
+                                prev.filter((f) => f !== fieldName)
+                              )
+                            }
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                <p className='text-sm text-gray-500'>
+                  Selected fields will be enforced as unique together, meaning the combination of these field values must be unique across all records.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         <DialogFooter>

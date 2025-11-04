@@ -1,11 +1,16 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, Search, Filter, MoreHorizontal } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import AdvancedTable from "@/components/shared/AdvancedTable";
-import { Policy, PolicyCategory, PolicyFormData } from "../types/policy";
+import {
+  Policy,
+  PolicyCategory,
+  PolicyFormData,
+  PoliciesFilters,
+} from "../types/policy";
 import { cn, formatDate } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -15,6 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import PolicyModal from "../components/PolicyModal";
 import ViewPolicyModal from "../components/ViewPolicyModal";
+import { policiesService } from "@/services/policies";
 
 interface PoliciesAndStandardsProps {
   className?: string;
@@ -31,133 +37,49 @@ export default function PoliciesAndStandards({
   const [editingPolicy, setEditingPolicy] = useState<Policy | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [viewingPolicy, setViewingPolicy] = useState<Policy | null>(null);
+  const [policies, setPolicies] = useState<Policy[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock data for policies
-  const mockPolicies: Policy[] = useMemo(
-    () => [
-      {
-        id: "1",
-        title: "Data Retention Policy",
-        category: "Data Retention",
-        status: "Published",
-        dataOwner: "Ibrahim Musa",
-        domains: ["Finance", "HR"],
-        lastUpdated: "2025-08-13",
-        description:
-          "Policy governing how long different types of data should be retained",
-        content: "This policy outlines the data retention requirements...",
-        version: "1.2",
-        createdBy: "John Doe",
-        createdAt: "2025-01-15",
-        effectiveDate: "2025-02-01",
-        reviewDate: "2026-02-01",
-      },
-      {
-        id: "2",
-        title: "Naming Standards",
-        category: "Naming Convention",
-        status: "Draft",
-        dataOwner: "Chinwe Okonkwo",
-        domains: ["All"],
-        lastUpdated: "2025-08-05",
-        description: "Standards for naming datasets, tables, and columns",
-        content: "This document defines the naming conventions...",
-        version: "0.1",
-        createdBy: "Jane Smith",
-        createdAt: "2025-07-20",
-        effectiveDate: "2025-09-01",
-        reviewDate: "2026-09-01",
-      },
-      {
-        id: "3",
-        title: "Data Privacy and Protection",
-        category: "Data Privacy",
-        status: "Published",
-        dataOwner: "Sarah Wilson",
-        domains: ["Legal", "Compliance", "HR"],
-        lastUpdated: "2025-07-22",
-        description: "Comprehensive data privacy and protection guidelines",
-        content:
-          "This policy ensures compliance with GDPR and other regulations...",
-        version: "2.0",
-        createdBy: "Mike Johnson",
-        createdAt: "2025-03-10",
-        effectiveDate: "2025-04-01",
-        reviewDate: "2026-04-01",
-      },
-      {
-        id: "4",
-        title: "Data Quality Standards",
-        category: "Data Quality",
-        status: "Published",
-        dataOwner: "Alex Chen",
-        domains: ["Engineering", "Analytics"],
-        lastUpdated: "2025-06-15",
-        description:
-          "Standards for maintaining high-quality data across systems",
-        content:
-          "This document outlines the minimum data quality requirements...",
-        version: "1.5",
-        createdBy: "Emily Davis",
-        createdAt: "2025-02-28",
-        effectiveDate: "2025-03-15",
-        reviewDate: "2026-03-15",
-      },
-      {
-        id: "5",
-        title: "Access Control Framework",
-        category: "Access Control",
-        status: "Draft",
-        dataOwner: "David Rodriguez",
-        domains: ["IT", "Security"],
-        lastUpdated: "2025-09-01",
-        description:
-          "Framework for managing data access permissions and controls",
-        content:
-          "This framework defines how access to sensitive data should be managed...",
-        version: "0.3",
-        createdBy: "Lisa Anderson",
-        createdAt: "2025-08-15",
-        effectiveDate: "2025-10-01",
-        reviewDate: "2026-10-01",
-      },
-    ],
-    []
-  );
-
-  // Filter policies based on tab and search
-  const filteredPolicies = useMemo(() => {
-    let policies = mockPolicies;
-
-    // Filter by status (tab)
-    if (activeTab === "published") {
-      policies = policies.filter((policy) => policy.status === "Published");
-    } else if (activeTab === "draft") {
-      policies = policies.filter((policy) => policy.status === "Draft");
+  // Load policies from API
+  const loadPolicies = useCallback(async (filters?: PoliciesFilters) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const response = await policiesService.getPolicies({
+        ...filters,
+        page_size: 20,
+      });
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      setPolicies(response.data.results);
+    } catch (err) {
+      setError("Failed to load policies. Please try again.");
+      console.error("Error loading policies:", err);
+    } finally {
+      setIsLoading(false);
     }
+  }, []);
+  // console.log({ policies });
 
-    // Filter by search
-    if (searchValue) {
-      policies = policies.filter(
-        (policy) =>
-          policy.title.toLowerCase().includes(searchValue.toLowerCase()) ||
-          policy.category.toLowerCase().includes(searchValue.toLowerCase()) ||
-          policy.dataOwner.toLowerCase().includes(searchValue.toLowerCase()) ||
-          policy.domains.some((domain) =>
-            domain.toLowerCase().includes(searchValue.toLowerCase())
-          )
-      );
-    }
-
-    // Filter by category
+  // Load policies on component mount and when filters change
+  useEffect(() => {
+    const filters: PoliciesFilters = {};
+    if (searchValue) filters.search = searchValue;
     if (selectedCategory && selectedCategory !== "All Categories") {
-      policies = policies.filter(
-        (policy) => policy.category === selectedCategory
-      );
+      filters.category = selectedCategory;
+    }
+    if (activeTab === "published") {
+      filters.status = "PUBLISHED";
+    } else if (activeTab === "draft") {
+      filters.status = "DRAFT";
     }
 
-    return policies;
-  }, [activeTab, searchValue, selectedCategory, mockPolicies]);
+    loadPolicies(filters);
+  }, [activeTab, searchValue, selectedCategory, loadPolicies]);
+
+  // Policies are now loaded from API and filtered server-side
+  const filteredPolicies = policies;
 
   // Table columns configuration
   const columns = [
@@ -181,7 +103,7 @@ export default function PoliciesAndStandards({
         return (
           <span
             className={`px-2 py-1 text-xs rounded-md ${
-              item.status === "Published"
+              item.status === "PUBLISHED"
                 ? "bg-green-100 text-green-800"
                 : "bg-yellow-100 text-yellow-800"
             }`}
@@ -190,28 +112,26 @@ export default function PoliciesAndStandards({
           </span>
         );
       case "dataOwner":
-        return <span className='text-gray-900'>{item.dataOwner}</span>;
+        return <span className='text-gray-900'>{item.owner_name!}</span>;
       case "domains":
         return (
           <div className='flex flex-wrap gap-1'>
-            {item.domains.slice(0, 2).map((domain, index) => (
-              <span
-                key={index}
-                className='px-2 py-1 text-xs rounded-md bg-blue-100 text-blue-800'
-              >
-                {domain}
-              </span>
-            ))}
-            {item.domains.length > 2 && (
+            <span className='px-2 py-1 text-xs rounded-md bg-blue-100 text-blue-800'>
+              {item.domains}
+            </span>
+
+            {/* {item.domains.length > 2 && (
               <span className='px-2 py-1 text-xs rounded-md bg-gray-100 text-gray-600'>
                 +{item.domains.length - 2} more
               </span>
-            )}
+            )} */}
           </div>
         );
       case "lastUpdated":
         return (
-          <span className='text-gray-900'>{formatDate(item.lastUpdated)}</span>
+          <span className='text-gray-900'>
+            {formatDate(item.updated_datetime!)}
+          </span>
         );
       case "actions":
         return (
@@ -228,17 +148,12 @@ export default function PoliciesAndStandards({
               <DropdownMenuItem onClick={() => handleEditPolicy(item)}>
                 Edit
               </DropdownMenuItem>
-              {/* <DropdownMenuItem
-                onClick={() => console.log("Duplicate", item.id)}
-              >
-                Duplicate
-              </DropdownMenuItem> */}
-              {/* <DropdownMenuItem
-                onClick={() => console.log("Delete", item.id)}
+              <DropdownMenuItem
+                onClick={() => handleDeletePolicy(item.id)}
                 className='text-red-600'
               >
                 Delete
-              </DropdownMenuItem> */}
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         );
@@ -251,12 +166,41 @@ export default function PoliciesAndStandards({
   const categoryOptions = ["All Categories", ...Object.values(PolicyCategory)];
 
   // Handle policy creation/editing
-  const handlePolicySubmit = (formData: PolicyFormData, isDraft: boolean) => {
-    console.log("Policy submitted:", formData, "isDraft:", isDraft);
-    // Here you would typically send the data to your API
-    // For now, we'll just log it and close the modal
-    setIsModalOpen(false);
-    setEditingPolicy(null);
+  const handlePolicySubmit = async (
+    formData: PolicyFormData,
+    isDraft: boolean
+  ) => {
+    try {
+      const policyData = {
+        ...formData,
+        is_draft: isDraft ? true : false,
+      };
+
+      if (editingPolicy) {
+        await policiesService.updatePolicy(editingPolicy.id, policyData);
+      } else {
+        await policiesService.createPolicy(policyData);
+      }
+
+      setIsModalOpen(false);
+      setEditingPolicy(null);
+      // Reload policies to show the new/updated policy
+      const filters: PoliciesFilters = {};
+      if (searchValue) filters.search = searchValue;
+      if (selectedCategory && selectedCategory !== "All Categories") {
+        filters.category = selectedCategory;
+      }
+      if (activeTab === "published") {
+        filters.status = "PUBLISHED";
+      } else if (activeTab === "draft") {
+        filters.status = "DRAFT";
+      }
+
+      loadPolicies(filters);
+    } catch (err) {
+      console.error("Error saving policy:", err);
+      setError("Failed to save policy. Please try again.");
+    }
   };
 
   const handleCreatePolicy = () => {
@@ -274,18 +218,52 @@ export default function PoliciesAndStandards({
     setIsViewModalOpen(true);
   };
 
-  const handlePublishPolicy = () => {
+  const handlePublishPolicy = async () => {
     if (viewingPolicy) {
-      console.log("Publishing policy:", viewingPolicy.id);
-      // Here you would typically call your API to publish the policy
-      // For now, we'll just close the modal
-      setIsViewModalOpen(false);
-      setViewingPolicy(null);
+      try {
+        await policiesService.publishPolicy(viewingPolicy.id);
+        setIsViewModalOpen(false);
+        setViewingPolicy(null);
+        // Reload policies to show the updated status
+        const filters: PoliciesFilters = {};
+        if (searchValue) filters.search = searchValue;
+        if (selectedCategory && selectedCategory !== "All Categories") {
+          filters.category = selectedCategory;
+        }
+        if (activeTab === "published") {
+          filters.status = "PUBLISHED";
+        } else if (activeTab === "draft") {
+          filters.status = "DRAFT";
+        }
+
+        loadPolicies(filters);
+      } catch (err) {
+        console.error("Error publishing policy:", err);
+        setError("Failed to publish policy. Please try again.");
+      }
+    }
+  };
+
+  const handleDeletePolicy = async (policyId: string) => {
+    try {
+      await policiesService.deletePolicy(policyId);
+      // Reload policies to reflect the deletion
+      loadPolicies();
+    } catch (err) {
+      console.error("Error deleting policy:", err);
+      setError("Failed to delete policy. Please try again.");
     }
   };
 
   return (
     <div className={cn("space-y-6", className)}>
+      {/* Error Message */}
+      {error && (
+        <div className='bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md'>
+          {error}
+        </div>
+      )}
+
       {/* Header Section */}
       <div className='flex items-start justify-between'>
         <div>
@@ -349,7 +327,7 @@ export default function PoliciesAndStandards({
           <AdvancedTable
             data={filteredPolicies}
             columns={columns}
-            isLoading={false}
+            isLoading={isLoading}
             showCheckBox={true}
             getFormattedValue={getFormattedValue}
             // onRowSelect={setSelectedPolicies}
@@ -393,7 +371,7 @@ export default function PoliciesAndStandards({
           <AdvancedTable
             data={filteredPolicies}
             columns={columns}
-            isLoading={false}
+            isLoading={isLoading}
             showCheckBox={true}
             getFormattedValue={getFormattedValue}
             // onRowSelect={setSelectedPolicies}
@@ -413,7 +391,7 @@ export default function PoliciesAndStandards({
       <ViewPolicyModal
         open={isViewModalOpen}
         onOpenChange={setIsViewModalOpen}
-        policy={viewingPolicy}
+        policyId={viewingPolicy && viewingPolicy.id}
         onPublish={handlePublishPolicy}
       />
     </div>

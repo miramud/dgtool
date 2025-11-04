@@ -258,3 +258,74 @@ export const useGetDatasetCleanupSession = (id: string) => {
         retry: 1,
     });
 };
+
+export interface DuplicateRecord {
+    id: string;
+    cleanup_session_reference: string;
+    dataset_name: string;
+    dataset_reference: string;
+    created_datetime: string;
+    updated_datetime: string;
+    row_number: number;
+    duplicate_group_hash: string;
+    unique_together_fields: string[] | string;
+    field_values: Record<string, any> | string;
+    row_data: Record<string, any> | string;
+    duplicate_count: number;
+    is_first_occurrence: boolean;
+    cleanup_session: string;
+}
+
+export interface DuplicateRecordsResponse {
+    status: boolean;
+    message: string;
+    data: DuplicateRecord[];
+}
+
+export const useGetDatasetDuplicateRecords = (id: string) => {
+    return useQuery({
+        queryKey: ["datasetDuplicateRecords", id],
+        queryFn: async () => {
+            const endpoint = DATA_CATALOGUE_API_ROUTES.DATASET_DUPLICATE_RECORDS.replace('{id}', id);
+            const response = await axiosCallerWithToken.get(endpoint);
+            return response.data as DuplicateRecordsResponse;
+        },
+        enabled: !!id,
+        staleTime: 5 * 60 * 1000, // 5 minutes
+        retry: 1,
+    });
+};
+
+export interface DuplicateGroupResponse {
+    status: boolean;
+    message: string;
+    data: {
+        duplicate_group_hash: string;
+        unique_together_fields: string[];
+        field_values: string;
+        duplicate_count: number;
+        duplicate_records: {
+            id: string;
+            row_number: number;
+            is_first_occurrence: boolean;
+            row_data: string;
+            created_datetime: string;
+        }[];
+    };
+}
+
+export const useGetDuplicateRecordsByGroup = (datasetId: string, groupHash: string) => {
+    return useQuery({
+        queryKey: ["duplicateRecordsByGroup", datasetId, groupHash],
+        queryFn: async () => {
+            const endpoint = DATA_CATALOGUE_API_ROUTES.DATASET_DUPLICATE_RECORDS_BY_GROUP
+                .replace('{id}', datasetId)
+                .replace('{group_hash}', groupHash);
+            const response = await axiosCallerWithToken.get(endpoint);
+            return response.data as DuplicateGroupResponse;
+        },
+        enabled: !!datasetId && !!groupHash,
+        staleTime: 5 * 60 * 1000, // 5 minutes
+        retry: 1,
+    });
+};

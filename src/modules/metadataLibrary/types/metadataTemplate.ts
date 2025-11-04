@@ -27,6 +27,7 @@ export interface MetadataTemplate {
   updatedAt: string;
   created_by?: { first_name: string; last_name: string };
   category?: string;
+  unique_together_fields?: string[];
   // Legacy fields for backward compatibility
   dataset_type: {
     name: string;
@@ -93,6 +94,7 @@ export interface CreateMetadataTemplateApiRequest {
   name: string;
   description?: string;
   is_active: boolean;
+  unique_together_fields?: string[];
   dataset_type: string; // UUID
 }
 

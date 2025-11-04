@@ -8,7 +8,8 @@ import AdvancedTable from "../../../components/shared/AdvancedTable";
 import StatusBadge from "../../../components/shared/StatusBadge";
 import { BusinessDescription } from "../types/dataCatalogue";
 import type { DataCatalogue } from "../types/dataCatalogue";
-import { useGetDataCatalogue } from "../controllers/dataCatalogueController";
+
+import { useGetDataGovernors } from "../controllers/dataGovernanceController";
 import { cn, formatDate } from "@/lib/utils";
 import AssignOwnershipModal from "../components/AssignOwnershipModal";
 import EditStewardsModal from "../components/EditStewardsModal";
@@ -49,15 +50,38 @@ export default function DataStewardshipAndOwnership({
   const [editStewardsModalOpen, setEditStewardsModalOpen] = useState(false);
 
   // Get data from API using React Query
-  const { data: apiData, isLoading } = useGetDataCatalogue();
+  // const { data: apiData, isLoading } = useGetDataCatalogue();
+  const { data: dataGovernors, isLoading: isLoadingGovernors } =
+    useGetDataGovernors();
 
   const debouncedSearchValue = useDebounce(searchValue, 500);
 
-  // Use API data or fallback to empty array
-  const dataCatalogueData = useMemo(
-    () => (Array.isArray(apiData) ? apiData : []),
-    [apiData]
-  );
+  // Use governance data and transform it to display format
+  const dataCatalogueData = useMemo(() => {
+    if (!dataGovernors) return [];
+    return dataGovernors.map((governor: any, index: number) => ({
+      id: governor.dataset_id || governor.id || `dataset-${index}`,
+      name:
+        governor.dataset_name ||
+        governor.name ||
+        `Dataset ${governor.dataset_id || governor.id || index}`,
+      description: governor.description || "No description available",
+      dataset_type: governor.dataset_type || "Unknown",
+      tags: governor.tags || [],
+      created_datetime: governor.created_datetime,
+      updated_datetime: governor.updated_datetime,
+      sensitivity: governor.sensitivity || "INTERNAL",
+    }));
+  }, [dataGovernors]);
+
+  // Create a map of dataset governance info
+  const governanceMap = useMemo(() => {
+    if (!dataGovernors) return {};
+    return dataGovernors.reduce((acc: any, governor: any) => {
+      acc[governor.dataset_id] = governor;
+      return acc;
+    }, {});
+  }, [dataGovernors]);
 
   // BusinessDescription options for filtering (mimicking performance dialog pattern)
   const businessDescriptionOptions = [
@@ -73,13 +97,13 @@ export default function DataStewardshipAndOwnership({
     if (debouncedSearchValue) {
       dataCatalogue = dataCatalogue.filter(
         (item) =>
-          item.businessTechnicalSpecification
+          item.name
             ?.toLowerCase()
             .includes(debouncedSearchValue.toLowerCase()) ||
-          item.businessDescription
+          item.description
             ?.toLowerCase()
             .includes(debouncedSearchValue.toLowerCase()) ||
-          item.usageGuidelines
+          item.dataset_type
             ?.toLowerCase()
             .includes(debouncedSearchValue.toLowerCase()) ||
           item.tags?.some((tag: string) =>
@@ -94,7 +118,7 @@ export default function DataStewardshipAndOwnership({
       selectedBusinessDescription !== "All Business Descriptions"
     ) {
       dataCatalogue = dataCatalogue.filter(
-        (item) => item.businessDescription === selectedBusinessDescription
+        (item) => item.description === selectedBusinessDescription
       );
     }
 
@@ -109,13 +133,15 @@ export default function DataStewardshipAndOwnership({
     },
     { key: "businessDescription", header: "Business Domain" },
     { key: "usageGuidelines", header: "Classification" },
-    { key: "tags", header: "Data Owner" },
-    { key: "tags", header: "Data Stewards" },
+    { key: "dataOwner", header: "Data Owner" },
+    { key: "dataStewards", header: "Data Stewards" },
     { key: "date", header: "Last Updated" },
   ];
 
   // Format table cell data
   const getFormattedValue = (item: DataCatalogue, columnKey: string) => {
+    const governance = governanceMap[item.id];
+
     switch (columnKey) {
       case "businessTechnicalSpecification":
         return <span className='text-gray-900'>{item.name}</span>;
@@ -123,6 +149,64 @@ export default function DataStewardshipAndOwnership({
         return <span className='text-gray-900'>{item.description}</span>;
       case "usageGuidelines":
         return <span className='text-gray-900'>{item.dataset_type}</span>;
+      case "dataOwner":
+        if (governance?.data_owners?.length > 0) {
+          return (
+            <div className='flex flex-wrap gap-1'>
+              {governance.data_owners
+                .slice(0, 2)
+                .map((owner: any, index: number) => (
+                  <StatusBadge
+                    key={index}
+                    status={
+                      typeof owner === "string"
+                        ? owner
+                        : owner.name || owner.email
+                    }
+                    variant='default'
+                    className='bg-green-100 text-green-800'
+                  />
+                ))}
+              {governance.data_owners.length > 2 && (
+                <StatusBadge
+                  status={`+${governance.data_owners.length - 2} more`}
+                  variant='default'
+                  className='bg-gray-100 text-gray-600'
+                />
+              )}
+            </div>
+          );
+        }
+        return <span className='text-gray-500'>Not assigned</span>;
+      case "dataStewards":
+        if (governance?.stewards?.length > 0) {
+          return (
+            <div className='flex flex-wrap gap-1'>
+              {governance.stewards
+                .slice(0, 2)
+                .map((steward: any, index: number) => (
+                  <StatusBadge
+                    key={index}
+                    status={
+                      typeof steward === "string"
+                        ? steward
+                        : steward.name || steward.email
+                    }
+                    variant='default'
+                    className='bg-blue-100 text-blue-800'
+                  />
+                ))}
+              {governance.stewards.length > 2 && (
+                <StatusBadge
+                  status={`+${governance.stewards.length - 2} more`}
+                  variant='default'
+                  className='bg-gray-100 text-gray-600'
+                />
+              )}
+            </div>
+          );
+        }
+        return <span className='text-gray-500'>Not assigned</span>;
       case "tags":
         return (
           <div className='flex flex-wrap gap-1'>
@@ -161,6 +245,8 @@ export default function DataStewardshipAndOwnership({
     {
       label: "View",
       action: (item: DataCatalogue) => {
+        // console.log({ item });
+
         router.push(`/dashboard/data-stewardship/${item.id}`);
       },
     },
@@ -270,7 +356,7 @@ export default function DataStewardshipAndOwnership({
       <AdvancedTable
         data={filteredDataCatalogue}
         columns={columns}
-        isLoading={isLoading}
+        isLoading={isLoadingGovernors}
         showCheckBox={true}
         options={tableOptions}
         getFormattedValue={getFormattedValue}
