@@ -24,7 +24,10 @@ import AdvancedTable from "../../../components/shared/AdvancedTable";
 import StatusBadge from "../../../components/shared/StatusBadge";
 import { BusinessDescription } from "../types/dataCatalogue";
 import type { DataCatalogue } from "../types/dataCatalogue";
-import { useGetDataCatalogue, useDeleteDataCatalogue } from "../controllers/dataCatalogueController";
+import {
+  useGetDataCatalogue,
+  useDeleteDataCatalogue,
+} from "../controllers/dataCatalogueController";
 import { cn, formatDate } from "@/lib/utils";
 import DataCatalogueModal from "../components/DataCatalogueModal";
 import DeleteDataCatalogueModal from "../components/DeleteDataCatalogueModal";
@@ -70,27 +73,29 @@ export default function DataCatalogue({
 
   // Get data from API using React Query
   const { data: apiData, isLoading, refetch } = useGetDataCatalogue();
-  
+
   // Delete hook
-  const { deleteDataCatalogue, isLoading: isDeleting } = useDeleteDataCatalogue();
+  const { deleteDataCatalogue, isLoading: isDeleting } =
+    useDeleteDataCatalogue();
 
   const debouncedSearchValue = useDebounce(searchValue, 500);
-  
 
   // Use API data or fallback to empty array
-  const dataCatalogueData = useMemo(() => Array.isArray(apiData) ? apiData : [], [apiData]);
+  const dataCatalogueData = useMemo(
+    () => (Array.isArray(apiData) ? apiData : []),
+    [apiData]
+  );
 
   // BusinessDescription options for filtering (mimicking performance dialog pattern)
   const businessDescriptionOptions = [
     "All Business Descriptions",
     ...Object.values(BusinessDescription),
   ];
-  
 
   // Filter data catalogue based on search and business description
   const filteredDataCatalogue = useMemo(() => {
     let dataCatalogue = [...dataCatalogueData];
-    
+
     // Apply search filter
     if (debouncedSearchValue) {
       dataCatalogue = dataCatalogue.filter(
@@ -122,7 +127,7 @@ export default function DataCatalogue({
 
     return dataCatalogue;
   }, [debouncedSearchValue, selectedBusinessDescription, dataCatalogueData]);
-  
+
   // Table columns configuration
   const columns = [
     {
@@ -137,24 +142,18 @@ export default function DataCatalogue({
   ];
 
   // Format table cell data
-  const getFormattedValue = (item: DataCatalogue, columnKey: string) => {    
+  const getFormattedValue = (item: DataCatalogue, columnKey: string) => {
     switch (columnKey) {
       case "businessTechnicalSpecification":
-        return (
-          <span className='text-gray-900'>
-            {item.name}
-          </span>
-        );
+        return <span className='text-gray-900'>{item.name}</span>;
       case "businessDescription":
-        return (
-          <span className='text-gray-900'>{item.description}</span>
-        );
+        return <span className='text-gray-900'>{item.description}</span>;
       case "usageGuidelines":
         return <span className='text-gray-900'>{item.dataset_type}</span>;
       case "tags":
         return (
           <div className='flex flex-wrap gap-1'>
-            {item.tags.slice(0, 2).map((tag, index) => (
+            {item.tags?.slice(0, 2).map((tag, index) => (
               <StatusBadge
                 key={index}
                 status={tag}
@@ -162,7 +161,7 @@ export default function DataCatalogue({
                 className='bg-blue-100 text-blue-800'
               />
             ))}
-            {item.tags.length > 2 && (
+            {item.tags?.length > 2 && (
               <StatusBadge
                 status={`+${item.tags.length - 2} more`}
                 variant='default'
@@ -172,7 +171,11 @@ export default function DataCatalogue({
           </div>
         );
       case "date":
-        return <span className='text-gray-900'>{formatDate(item.created_datetime)}</span>;
+        return (
+          <span className='text-gray-900'>
+            {formatDate(item.created_datetime)}
+          </span>
+        );
       case "dataSource":
         return <span className='text-gray-900'>{item.sensitivity}</span>;
       default:

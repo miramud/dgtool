@@ -44,7 +44,7 @@ const fieldTypes = [
   { value: "text", label: "Text" },
   { value: "number", label: "Number" },
   { value: "date", label: "Date" },
-  { value: "dropdown", label: "Dropdown" },
+  // { value: "dropdown", label: "Dropdown" },
   { value: "boolean", label: "Boolean" },
 ];
 
@@ -96,8 +96,11 @@ function CreateMetadataTemplateModal({
   const [fields, setFields] = useState<Omit<MetadataField, "id">[]>(
     template?.fields?.map((f) => ({ ...f, id: undefined })) || []
   );
-  const [uniqueTogetherFields, setUniqueTogetherFields] = useState<string[]>([]);
-  const [showUniqueTogetherDropdown, setShowUniqueTogetherDropdown] = useState(false);
+  const [uniqueTogetherFields, setUniqueTogetherFields] = useState<string[]>(
+    []
+  );
+  const [showUniqueTogetherDropdown, setShowUniqueTogetherDropdown] =
+    useState(false);
   const [showAddField, setShowAddField] = useState(false);
 
   // Field form state
@@ -215,7 +218,7 @@ function CreateMetadataTemplateModal({
     const fieldToRemove = fields[index];
     setFields(fields.filter((_, i) => i !== index));
     // Remove from unique together fields if present
-    setUniqueTogetherFields((prev) => 
+    setUniqueTogetherFields((prev) =>
       prev.filter((fieldName) => fieldName !== fieldToRemove.field_name)
     );
   };
@@ -242,7 +245,8 @@ function CreateMetadataTemplateModal({
         is_active: true,
         dataset_type: selectedDatasetType.id,
         fields: fields.map(convertFieldToApi),
-        unique_together_fields: uniqueTogetherFields,
+        unique_together_fields:
+          uniqueTogetherFields.length > 0 ? uniqueTogetherFields : null,
       };
       // console.log({ apiPayload });
 
@@ -338,7 +342,6 @@ function CreateMetadataTemplateModal({
               />
             </div>
           </div>
-
 
           {/* Fields Section */}
           <div>
@@ -649,7 +652,9 @@ function CreateMetadataTemplateModal({
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      setShowUniqueTogetherDropdown(!showUniqueTogetherDropdown);
+                      setShowUniqueTogetherDropdown(
+                        !showUniqueTogetherDropdown
+                      );
                     }}
                   >
                     <div className='flex flex-wrap gap-1 flex-1'>
@@ -660,7 +665,8 @@ function CreateMetadataTemplateModal({
                       ) : (
                         <span className='text-sm'>
                           {uniqueTogetherFields.length} field
-                          {uniqueTogetherFields.length !== 1 ? "s" : ""} selected
+                          {uniqueTogetherFields.length !== 1 ? "s" : ""}{" "}
+                          selected
                         </span>
                       )}
                     </div>
@@ -684,9 +690,9 @@ function CreateMetadataTemplateModal({
                           }}
                         >
                           <div className='w-4 h-4 flex items-center justify-center'>
-                            {uniqueTogetherFields.includes(field.field_name) && (
-                              <Check className='w-4 h-4 text-blue-600' />
-                            )}
+                            {uniqueTogetherFields.includes(
+                              field.field_name
+                            ) && <Check className='w-4 h-4 text-blue-600' />}
                           </div>
                           {field.field_name} ({field.field_type})
                         </div>
@@ -699,7 +705,9 @@ function CreateMetadataTemplateModal({
                 {uniqueTogetherFields.length > 0 && (
                   <div className='flex flex-wrap gap-2 mt-2'>
                     {uniqueTogetherFields.map((fieldName) => {
-                      const field = fields.find((f) => f.field_name === fieldName);
+                      const field = fields.find(
+                        (f) => f.field_name === fieldName
+                      );
                       return (
                         <div
                           key={fieldName}
@@ -720,7 +728,9 @@ function CreateMetadataTemplateModal({
                   </div>
                 )}
                 <p className='text-sm text-gray-500'>
-                  Selected fields will be enforced as unique together, meaning the combination of these field values must be unique across all records.
+                  Selected fields will be enforced as unique together, meaning
+                  the combination of these field values must be unique across
+                  all records.
                 </p>
               </div>
             </div>

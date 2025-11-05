@@ -94,7 +94,7 @@ export interface CreateMetadataTemplateApiRequest {
   name: string;
   description?: string;
   is_active: boolean;
-  unique_together_fields?: string[];
+  unique_together_fields?: string[] | null;
   dataset_type: string; // UUID
 }
 

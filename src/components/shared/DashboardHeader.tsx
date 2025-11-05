@@ -1,12 +1,18 @@
 "use client";
 import { Bell, ChevronRight } from "lucide-react";
 import { usePathname } from "next/navigation";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useUserProfile } from "@/modules/userManagement/controllers/userController";
 
 export default function DashboardHeader() {
   const pathname = usePathname();
   const { data: profile, isLoading } = useUserProfile();
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const getBreadcrumbs = () => {
     const segments = pathname.split("/").filter(Boolean);
@@ -57,7 +63,7 @@ export default function DashboardHeader() {
           <div className='flex items-center space-x-3'>
             <div className='w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center'>
               <span className='text-sm font-medium text-gray-700'>
-                {isLoading
+                {!isMounted || isLoading
                   ? "..."
                   : profile
                   ? `${profile.first_name.charAt(0)}${profile.last_name.charAt(
@@ -68,14 +74,14 @@ export default function DashboardHeader() {
             </div>
             <div className='text-sm'>
               <p className='font-medium text-gray-900'>
-                {isLoading
+                {!isMounted || isLoading
                   ? "Loading..."
                   : profile
                   ? `${profile.first_name} ${profile.last_name}`
                   : "User"}
               </p>
               <p className='text-gray-500'>
-                {isLoading
+                {!isMounted || isLoading
                   ? "Loading..."
                   : profile?.email || "user@example.com"}
               </p>
