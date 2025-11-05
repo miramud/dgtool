@@ -68,6 +68,8 @@ export default function DataStewardshipAndOwnership({
       description: governor.description || "No description available",
       dataset_type: governor.dataset_type || "Unknown",
       tags: governor.tags || [],
+      data_stewards_count: governor.data_stewards_count,
+      data_owners_count: governor.data_owners_count,
       created_datetime: governor.created_datetime,
       updated_datetime: governor.updated_datetime,
       sensitivity: governor.sensitivity || "INTERNAL",
@@ -141,6 +143,7 @@ export default function DataStewardshipAndOwnership({
   // Format table cell data
   const getFormattedValue = (item: DataCatalogue, columnKey: string) => {
     const governance = governanceMap[item.id];
+    console.log({ governance, item });
 
     switch (columnKey) {
       case "businessTechnicalSpecification":
@@ -150,34 +153,37 @@ export default function DataStewardshipAndOwnership({
       case "usageGuidelines":
         return <span className='text-gray-900'>{item.dataset_type}</span>;
       case "dataOwner":
-        if (governance?.data_owners?.length > 0) {
-          return (
-            <div className='flex flex-wrap gap-1'>
-              {governance.data_owners
-                .slice(0, 2)
-                .map((owner: any, index: number) => (
-                  <StatusBadge
-                    key={index}
-                    status={
-                      typeof owner === "string"
-                        ? owner
-                        : owner.name || owner.email
-                    }
-                    variant='default'
-                    className='bg-green-100 text-green-800'
-                  />
-                ))}
-              {governance.data_owners.length > 2 && (
-                <StatusBadge
-                  status={`+${governance.data_owners.length - 2} more`}
-                  variant='default'
-                  className='bg-gray-100 text-gray-600'
-                />
-              )}
-            </div>
-          );
-        }
-        return <span className='text-gray-500'>Not assigned</span>;
+        // if (governance?.data_owners?.length > 0) {
+        //   return (
+        //     <div className='flex flex-wrap gap-1'>
+        //       {governance.data_owners
+        //         .slice(0, 2)
+        //         .map((owner: any, index: number) => (
+        //           <StatusBadge
+        //             key={index}
+        //             status={
+        //               typeof owner === "string"
+        //                 ? owner
+        //                 : owner.name || owner.email
+        //             }
+        //             variant='default'
+        //             className='bg-green-100 text-green-800'
+        //           />
+        //         ))}
+        //       {governance.data_owners.length > 2 && (
+        //         <StatusBadge
+        //           status={`+${governance.data_owners.length - 2} more`}
+        //           variant='default'
+        //           className='bg-gray-100 text-gray-600'
+        //         />
+        //       )}
+        //     </div>
+        //   );
+        // }
+
+        return (
+          <span className='text-gray-500'>{item?.data_stewards_count}</span>
+        );
       case "dataStewards":
         if (governance?.stewards?.length > 0) {
           return (
@@ -206,7 +212,8 @@ export default function DataStewardshipAndOwnership({
             </div>
           );
         }
-        return <span className='text-gray-500'>Not assigned</span>;
+        return <span className='text-gray-500'>{item?.data_owners_count}</span>;
+
       case "tags":
         return (
           <div className='flex flex-wrap gap-1'>
