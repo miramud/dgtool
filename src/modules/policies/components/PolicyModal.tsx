@@ -337,7 +337,21 @@ export default function PolicyModal({
           </div>
 
           {/* Rich Text Editor */}
-          {formData?.description && (
+          {policy?.id && formData?.description && (
+            <div>
+              <label className='block text-sm font-medium text-gray-900 mb-2'>
+                Policy Content
+              </label>
+              <RichTextEditor
+                content={formData.description}
+                onChange={(content) =>
+                  handleInputChange("description", content)
+                }
+                placeholder='Enter policy content...'
+              />
+            </div>
+          )}
+          {!policy?.id && (
             <div>
               <label className='block text-sm font-medium text-gray-900 mb-2'>
                 Policy Content

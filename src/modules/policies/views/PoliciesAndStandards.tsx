@@ -248,7 +248,19 @@ export default function PoliciesAndStandards({
     try {
       await policiesService.deletePolicy(policyId);
       // Reload policies to reflect the deletion
-      loadPolicies();
+      // Reload policies to show the updated status
+      const filters: PoliciesFilters = {};
+      if (searchValue) filters.search = searchValue;
+      if (selectedCategory && selectedCategory !== "All Categories") {
+        filters.category = selectedCategory;
+      }
+      if (activeTab === "published") {
+        filters.status = "PUBLISHED";
+      } else if (activeTab === "draft") {
+        filters.status = "DRAFT";
+      }
+
+      loadPolicies(filters);
     } catch (err) {
       console.error("Error deleting policy:", err);
       setError("Failed to delete policy. Please try again.");
