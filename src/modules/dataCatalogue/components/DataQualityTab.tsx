@@ -491,19 +491,30 @@ export default function DataQualityTab({ dataset }: DataQualityTabProps) {
                             </p>
                           </div>
                         ))}
-                    </div>
-
-                    <div className='flex items-center justify-between'>
-                      <div className='flex items-center gap-2'>
+                      <div>
                         <span className='text-sm font-medium text-gray-500'>
                           Status:
                         </span>
-                        <span className='px-2 py-1 text-xs rounded-md bg-orange-100 text-orange-800'>
-                          MANUAL REVIEW REQUIRED
-                        </span>
+                        <p className='text-sm text-gray-900'>
+                          <span className='px-2 py-1 text-xs rounded-md bg-orange-100 text-orange-800'>
+                            MANUAL REVIEW REQUIRED
+                          </span>
+                        </p>
                       </div>
+                      <div>
+                        <span className='text-sm font-medium text-gray-500'>
+                          Row:
+                        </span>
+                        <p className='text-sm text-gray-900'>
+                          <span className='px-2 py-1 text-xs rounded-md bg-blue-100 text-blue-800 font-medium'>
+                            {duplicate.row_number}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
 
-                      {/* <div className='flex gap-2'>
+                    {/* <div className='flex items-center justify-between'>
+                      <div className='flex gap-2'>
                         <Button
                           variant='outline'
                           size='sm'
@@ -520,8 +531,8 @@ export default function DataQualityTab({ dataset }: DataQualityTabProps) {
                           <Trash2 className='w-4 h-4' />
                           Delete
                         </Button>
-                      </div> */}
-                    </div>
+                      </div>
+                    </div> */}
                   </div>
                 );
               })

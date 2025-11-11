@@ -10,7 +10,6 @@ import ReactFlow, {
   useEdgesState,
   Controls,
   Background,
-  MiniMap,
   BackgroundVariant,
   Panel,
   useReactFlow,
@@ -60,7 +59,7 @@ const generateLineageNodes = (dataset: LineageTabProps['dataset']): Node<BaseNod
     {
       id: 'source',
       type: 'sourceNode',
-      position: { x: 0, y: 50 },
+      position: { x: 100, y: 50 },
       data: {
         label: 'File Upload',
         details: {
@@ -75,7 +74,7 @@ const generateLineageNodes = (dataset: LineageTabProps['dataset']): Node<BaseNod
     {
       id: 'raw-dataset',
       type: 'datasetNode',
-      position: { x: 250, y: 50 },
+      position: { x: 350, y: 50 },
       data: {
         label: `${dataset.name} (Raw)`,
         fileType: 'raw',
@@ -95,7 +94,7 @@ const generateLineageNodes = (dataset: LineageTabProps['dataset']): Node<BaseNod
     {
       id: 'etl',
       type: 'etlNode',
-      position: { x: 500, y: 50 },
+      position: { x: 600, y: 50 },
       data: {
         label: 'Data Processing',
         details: {
@@ -114,7 +113,7 @@ const generateLineageNodes = (dataset: LineageTabProps['dataset']): Node<BaseNod
     nodes.push({
       id: 'processed-dataset',
       type: 'datasetNode',
-      position: { x: 750, y: 50 },
+      position: { x: 850, y: 50 },
       data: {
         label: `${dataset.name} (Clean)`,
         fileType: 'processed',
@@ -211,7 +210,7 @@ function LineageFlow({ dataset }: LineageTabProps) {
   }, [fitView]);
 
   return (
-    <div className="h-[800px] w-full">
+    <div className="h-[300px] w-full">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -221,6 +220,9 @@ function LineageFlow({ dataset }: LineageTabProps) {
         onNodeClick={onNodeClick}
         nodeTypes={nodeTypes}
         fitView
+        fitViewOptions={{
+          padding: 0.2
+        }}
         attributionPosition="top-right"
         proOptions={{
           hideAttribution: true,
@@ -235,22 +237,11 @@ function LineageFlow({ dataset }: LineageTabProps) {
         />
         
         {/* Controls panel */}
-        <Controls 
+        <Controls
           position="top-left"
           showZoom={true}
           showFitView={true}
           showInteractive={true}
-        />
-        
-        {/* Mini map */}
-        <MiniMap 
-          position="bottom-right"
-          nodeColor="#6b7280"
-          maskColor="rgba(0, 0, 0, 0.1)"
-          style={{
-            backgroundColor: '#ffffff',
-            border: '1px solid #e5e7eb',
-          }}
         />
 
         {/* Custom panel with reset button and instructions */}
