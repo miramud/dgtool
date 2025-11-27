@@ -10,7 +10,7 @@ export function LandingPropositionSection() {
                         Value Proposition
                     </p>
                     <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground mb-4">
-                        Why Data Governance needs to be different
+                        Why Steward Core needs to be different
                     </h2>
 
                     <p className="text-base sm:text-lg text-[#3D4347] font-medium max-w-2xl mx-auto">

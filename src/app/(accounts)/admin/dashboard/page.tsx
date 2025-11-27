@@ -1,12 +1,12 @@
-// import EnhancedUserManagement from "@/modules/userManagement/components/EnhancedUserManagement";
 import { Metadata } from "next";
+import { DashboardView } from "@/modules/dashboard";
 
 export const metadata: Metadata = {
-  title: "My Users - Data Governance Tool",
+  title: "Admin Dashboard - Data Governance Tool",
   description:
-    "Add and manage your internal users. Only authorized users can access your company dashboard on Rigshare.",
+    "View key governance metrics including data quality, metadata completeness, and issue trends.",
 };
 
-export default function UsersPage() {
-  return <div className=''>Dashboard</div>;
+export default function AdminDashboardPage() {
+  return <DashboardView userRole="admin" userName="Ahmed" />;
 }

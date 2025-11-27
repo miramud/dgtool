@@ -70,7 +70,7 @@ export function LandingFooter() {
 
         <div className='border-t border-gray-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center'>
           <p className='text-sm text-white'>
-            © 2024 Data Govern. All rights reserved.
+            © {new Date().getFullYear()} Data Govern. All rights reserved.
           </p>
           <div className='flex items-center gap-2 mt-4 md:mt-0'>
             <a

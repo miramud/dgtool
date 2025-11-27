@@ -1,8 +1,6 @@
 "use client";
 import { LandingCtaSection } from "@/modules/landing/components/CtaSection";
 import { LandingFeatureSection } from "@/modules/landing/components/FeatureSection";
-import { LandingFooter } from "@/modules/landing/components/Footer";
-import LandingHeader from "@/modules/landing/components/Header";
 import { LandingHeroSection } from "@/modules/landing/components/HeroSection";
 import { LandingPricingSection } from "@/modules/landing/components/Pricing";
 import { LandingProcessSection } from "@/modules/landing/components/Process";
@@ -24,7 +22,6 @@ export default function LandingPageClient() {
 
     return (
         <Fragment>
-            <LandingHeader />
             <LandingHeroSection />
             <LandingPropositionSection />
             <LandingFeatureSection />
@@ -32,7 +29,6 @@ export default function LandingPageClient() {
             <LandingProcessSection />
             <LandingPricingSection />
             <LandingCtaSection />
-            <LandingFooter />
         </Fragment>
     );
 }

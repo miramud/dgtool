@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/api/proxy/:path*',
-        destination: 'https://dgtool-5c31a88273ef.herokuapp.com/api/v1/:path*',
+        destination: 'https://dgtool-dev.rightclick-academy.com/api/v1/:path*',
       },
     ];
   },

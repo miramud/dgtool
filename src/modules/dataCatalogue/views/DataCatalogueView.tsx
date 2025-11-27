@@ -15,6 +15,9 @@ import DataQualityTab from "../components/DataQualityTab";
 import LineageTab from "../components/LineageTab";
 import AccessPermissionsTab from "../components/AccessPermissionsTab";
 import VersionHistoryTab from "../components/VersionHistoryTab";
+import IssueLogPanel from "../components/IssueLogPanel";
+import IssueBadge from "../components/IssueBadge";
+import ReportIssueModal from "../components/ReportIssueModal";
 
 interface DataCatalogueViewProps {
   className?: string;
@@ -27,7 +30,8 @@ export default function DataCatalogueView({
   datasetId,
 }: DataCatalogueViewProps) {
   const [activeTab, setActiveTab] = useState("overview");
-  
+  const [reportIssueModalOpen, setReportIssueModalOpen] = useState(false);
+
   // Fetch dataset data
   const { data: dataset, isLoading, error } = useGetDataCatalogueById(datasetId);
 
@@ -69,12 +73,14 @@ export default function DataCatalogueView({
   return (
     <div className={cn("p-6 space-y-6 bg-white", className)}>
       {/* Report Data Issues Button */}
-      <div className="flex justify-end">
-        <Button 
-          variant="default" 
+      <div className="flex justify-end items-center gap-3">
+        <IssueBadge datasetId={datasetId} />
+        <Button
+          variant="default"
           className="bg-[#4A4A7A] hover:bg-[#3A3A6A]"
+          onClick={() => setReportIssueModalOpen(true)}
         >
-          Report Data Issues
+          Report Issue
         </Button>
       </div>
 
@@ -141,6 +147,7 @@ export default function DataCatalogueView({
           <TabsTrigger value="lineage">Lineage</TabsTrigger>
           <TabsTrigger value="access-permissions">Access & Permissions</TabsTrigger>
           <TabsTrigger value="version-history">Version History</TabsTrigger>
+          <TabsTrigger value="issues">Issues</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview">
@@ -166,7 +173,19 @@ export default function DataCatalogueView({
         <TabsContent value="version-history">
           <VersionHistoryTab dataset={dataset} />
         </TabsContent>
+
+        <TabsContent value="issues">
+          <IssueLogPanel datasetId={datasetId} />
+        </TabsContent>
       </Tabs>
+
+      {/* Report Issue Modal */}
+      <ReportIssueModal
+        open={reportIssueModalOpen}
+        onOpenChange={setReportIssueModalOpen}
+        datasetId={datasetId}
+        datasetName={dataset.name}
+      />
     </div>
   );
 }

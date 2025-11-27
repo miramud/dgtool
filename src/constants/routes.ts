@@ -1,3 +1,9 @@
+export enum LANDING_ROUTES {
+    HOME = "/",
+    ABOUT = "/about-us",
+    CONTACT = "/contact-us",
+}
+
 export enum AUTH_ROUTES {
     SIGN_UP = "/auth/signup",
     SIGN_IN = "/auth/signin",

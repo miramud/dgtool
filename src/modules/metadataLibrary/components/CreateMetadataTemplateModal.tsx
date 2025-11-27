@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, X, ChevronDown, Check } from "lucide-react";
+import { Plus, X, ChevronDown, Check, Edit } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -43,6 +43,9 @@ interface CreateMetadataTemplateModalProps {
 const fieldTypes = [
   { value: "text", label: "Text" },
   { value: "number", label: "Number" },
+  { value: "PERCENTAGE", label: "Percentage" },
+  { value: "PHONE_NUMBER", label: "Phone Number" },
+  { value: "EMAIL", label: "Email" },
   { value: "date", label: "Date" },
   // { value: "dropdown", label: "Dropdown" },
   { value: "boolean", label: "Boolean" },
@@ -102,6 +105,7 @@ function CreateMetadataTemplateModal({
   const [showUniqueTogetherDropdown, setShowUniqueTogetherDropdown] =
     useState(false);
   const [showAddField, setShowAddField] = useState(false);
+  const [editingFieldIndex, setEditingFieldIndex] = useState<number | null>(null);
 
   // Field form state
   const [fieldName, setFieldName] = useState("");
@@ -184,6 +188,7 @@ function CreateMetadataTemplateModal({
     setShowFieldAttributeDropdown(false);
     setDropdownOptions([]);
     setNewOption("");
+    setEditingFieldIndex(null);
   };
 
   const handleAddOption = () => {
@@ -195,6 +200,18 @@ function CreateMetadataTemplateModal({
 
   const handleRemoveOption = (index: number) => {
     setDropdownOptions(dropdownOptions.filter((_, i) => i !== index));
+  };
+
+  const handleEditField = (index: number) => {
+    const field = fields[index];
+    setFieldName(field.field_name);
+    setFieldType(field.field_type);
+    setIsRequired(field.is_required || false);
+    setIsSensitive(field.is_sensitive || false);
+    setFieldFieldAttributes(field.attributes || []);
+    setDropdownOptions(field.options || []);
+    setEditingFieldIndex(index);
+    setShowAddField(true);
   };
 
   const handleSaveField = () => {
@@ -209,7 +226,16 @@ function CreateMetadataTemplateModal({
       ...(fieldType === "dropdown" && { options: dropdownOptions }),
     };
 
-    setFields([...fields, newField]);
+    if (editingFieldIndex !== null) {
+      // Update existing field
+      const updatedFields = [...fields];
+      updatedFields[editingFieldIndex] = newField;
+      setFields(updatedFields);
+    } else {
+      // Add new field
+      setFields([...fields, newField]);
+    }
+
     setShowAddField(false);
     resetFieldForm();
   };
@@ -345,16 +371,8 @@ function CreateMetadataTemplateModal({
 
           {/* Fields Section */}
           <div>
-            <div className='flex items-center justify-between mb-4'>
+            <div className='mb-4'>
               <h3 className='text-lg font-medium'>Fields</h3>
-              <Button
-                variant='outline'
-                onClick={() => setShowAddField(true)}
-                className='text-[#4A4A7A]'
-              >
-                <Plus className='w-4 h-4 mr-2' />
-                Add Fields
-              </Button>
             </div>
 
             {/* Existing Fields Table */}
@@ -421,14 +439,24 @@ function CreateMetadataTemplateModal({
                           )}
                         </td>
                         <td className='px-4 py-3 text-sm'>
-                          <Button
-                            variant='ghost'
-                            size='sm'
-                            onClick={() => handleRemoveField(index)}
-                            className='text-red-600 hover:text-red-700'
-                          >
-                            <X className='w-4 h-4' />
-                          </Button>
+                          <div className='flex gap-2'>
+                            <Button
+                              variant='ghost'
+                              size='sm'
+                              onClick={() => handleEditField(index)}
+                              className='text-blue-600 hover:text-blue-700'
+                            >
+                              <Edit className='w-4 h-4' />
+                            </Button>
+                            <Button
+                              variant='ghost'
+                              size='sm'
+                              onClick={() => handleRemoveField(index)}
+                              className='text-red-600 hover:text-red-700'
+                            >
+                              <X className='w-4 h-4' />
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -437,9 +465,26 @@ function CreateMetadataTemplateModal({
               </div>
             )}
 
+            {/* Add Fields Button - Always visible below table/list */}
+            {!showAddField && (
+              <div className='mb-4'>
+                <Button
+                  variant='outline'
+                  onClick={() => setShowAddField(true)}
+                  className='text-[#4A4A7A] w-full sm:w-auto'
+                >
+                  <Plus className='w-4 h-4 mr-2' />
+                  Add Fields
+                </Button>
+              </div>
+            )}
+
             {/* Add Field Form */}
             {showAddField && (
               <div className='border rounded-lg p-4 bg-gray-50 space-y-4'>
+                <h4 className='text-md font-medium'>
+                  {editingFieldIndex !== null ? 'Edit Field' : 'Add New Field'}
+                </h4>
                 <div className='space-y-2'>
                   <Label htmlFor='fieldName'>Field Name</Label>
                   <Input
@@ -623,7 +668,7 @@ function CreateMetadataTemplateModal({
                     disabled={!fieldName.trim()}
                     className='bg-[#4A4A7A] hover:bg-[#3A3A6A]'
                   >
-                    Save Field
+                    {editingFieldIndex !== null ? 'Update Field' : 'Save Field'}
                   </Button>
                   <Button
                     variant='outline'

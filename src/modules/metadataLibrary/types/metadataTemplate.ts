@@ -8,7 +8,10 @@ export interface MetadataField {
     | "boolean"
     | "dropdown"
     | "select"
-    | "multiselect";
+    | "multiselect"
+    | "EMAIL"
+    | "PHONE_NUMBER"
+    | "PERCENTAGE";
   is_required: boolean;
   is_sensitive?: boolean;
   attributes?: string[];
@@ -77,7 +80,7 @@ export interface MetadataTemplateListResponse {
 // API-specific types to match backend specification
 export interface MetadataTemplateFieldApi {
   field_name: string;
-  field_type: "TEXT" | "NUMBER" | "DATE" | "BOOLEAN" | "DROPDOWN";
+  field_type: "TEXT" | "NUMBER" | "DATE" | "BOOLEAN" | "DROPDOWN" | "EMAIL" | "PHONE_NUMBER" | "PERCENTAGE";
   field_choices?: string;
   is_required: boolean;
   is_sensitive: boolean;
@@ -102,14 +105,17 @@ export interface CreateMetadataTemplateApiRequest {
 export const convertFieldToApi = (
   field: Omit<MetadataField, "id">
 ): MetadataTemplateFieldApi => {
-  const fieldTypeMap = {
-    text: "TEXT" as const,
-    number: "NUMBER" as const,
-    date: "DATE" as const,
-    boolean: "BOOLEAN" as const,
-    dropdown: "DROPDOWN" as const,
-    select: "DROPDOWN" as const,
-    multiselect: "DROPDOWN" as const,
+  const fieldTypeMap: Record<MetadataField["field_type"], MetadataTemplateFieldApi["field_type"]> = {
+    text: "TEXT",
+    number: "NUMBER",
+    date: "DATE",
+    boolean: "BOOLEAN",
+    dropdown: "DROPDOWN",
+    select: "DROPDOWN",
+    multiselect: "DROPDOWN",
+    EMAIL: "EMAIL",
+    PHONE_NUMBER: "PHONE_NUMBER",
+    PERCENTAGE: "PERCENTAGE",
   };
 
   return {
@@ -121,4 +127,38 @@ export const convertFieldToApi = (
     is_unique: false, // Default value, can be made configurable later
     attributes: field.attributes || [],
   };
+};
+
+// Helper function to format percentage values for display
+export const formatPercentageValue = (value: string | number | null | undefined): string => {
+  if (value === null || value === undefined || value === "") {
+    return "N/A";
+  }
+
+  const numValue = typeof value === "string" ? parseFloat(value) : value;
+
+  if (isNaN(numValue)) {
+    return "N/A";
+  }
+
+  return `${numValue}%`;
+};
+
+// Helper function to validate percentage values
+export const validatePercentageValue = (value: string | number): { isValid: boolean; message?: string } => {
+  if (value === null || value === undefined || value === "") {
+    return { isValid: false, message: "Percentage value is required" };
+  }
+
+  const numValue = typeof value === "string" ? parseFloat(value) : value;
+
+  if (isNaN(numValue)) {
+    return { isValid: false, message: "Please enter a valid number" };
+  }
+
+  if (numValue < 0 || numValue > 100) {
+    return { isValid: false, message: "Percentage must be between 0 and 100" };
+  }
+
+  return { isValid: true };
 };

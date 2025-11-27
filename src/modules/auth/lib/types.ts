@@ -45,4 +45,8 @@ export interface IUser {
   mobile_number: string | null;
   created_datetime: string;
   updated_datetime: string;
+  roles?: Array<{
+    id: string;
+    name: string;
+  }>;
 }

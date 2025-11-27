@@ -1,9 +1,11 @@
 import { DATA_CATALOGUE_API_ROUTES } from "@/constants/dataCatalogue-api-routes";
+import { ISSUE_ROUTES } from "@/constants/issue-api-routes";
 import useApiManager from "@/constants/controllers/mainController";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { axiosCallerWithToken } from "@/lib/helpers";
 import { AxiosError } from "axios";
 import { DataCatalogue, DataCatalogueFormData } from "../types/dataCatalogue";
+import { IssueListResponse, IssueStatus } from "../types/issue";
 
 export interface DataCatalogueResponse {
     dataCatalogue: DataCatalogue[];
@@ -326,6 +328,43 @@ export const useGetDuplicateRecordsByGroup = (datasetId: string, groupHash: stri
         },
         enabled: !!datasetId && !!groupHash,
         staleTime: 5 * 60 * 1000, // 5 minutes
+        retry: 1,
+    });
+};
+
+// Issue-related hooks
+export const useGetIssuesByDataset = (datasetId: string) => {
+    return useQuery({
+        queryKey: ["issues", "dataset", datasetId],
+        queryFn: async () => {
+            const url = `${ISSUE_ROUTES.LIST}?dataset=${datasetId}`;
+            const response = await axiosCallerWithToken.get(url);
+            return response.data.data as IssueListResponse;
+        },
+        enabled: !!datasetId,
+        staleTime: 2 * 60 * 1000, // 2 minutes for fresher issue data
+        retry: 1,
+    });
+};
+
+export const useGetOpenIssueCount = (datasetId: string) => {
+    return useQuery({
+        queryKey: ["issues", "openCount", datasetId],
+        queryFn: async () => {
+            // Fetch only open and in-progress issues for this dataset
+            const url = `${ISSUE_ROUTES.LIST}?dataset=${datasetId}`;
+            const response = await axiosCallerWithToken.get(url);
+            const data = response.data.data as IssueListResponse;
+
+            // Count only OPEN and IN_PROGRESS issues
+            const openCount = data.results.filter(
+                (issue) => issue.status === IssueStatus.OPEN || issue.status === IssueStatus.IN_PROGRESS
+            ).length;
+
+            return openCount;
+        },
+        enabled: !!datasetId,
+        staleTime: 2 * 60 * 1000, // 2 minutes
         retry: 1,
     });
 };

@@ -1,11 +1,14 @@
 import { Metadata } from "next";
+import { DashboardView } from "@/modules/dashboard";
 
 export const metadata: Metadata = {
-  title: "Metadata Library - Data Governance Tool",
+  title: "Dashboard - Data Governance Tool",
   description:
-    "Standardize metadata fields across all dataset types. Create templates so every dataset follows the same governance rules.",
+    "View key governance metrics including data quality, metadata completeness, and issue trends.",
 };
 
-export default function MetaDataLibraryPage() {
-  return <>Dashboard</>;
+export default function DashboardPage() {
+  // In a real app, get user role from auth context/session
+  // For demo, default to admin view
+  return <DashboardView userRole="admin" userName="Ahmed" />;
 }

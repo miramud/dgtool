@@ -34,6 +34,8 @@ export default function DataCatalogueModal({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'preparing' | 'uploading' | 'processing' | 'completed' | 'error'>('idle');
   const [uploadMessage, setUploadMessage] = useState('');
+  const [isDragging, setIsDragging] = useState(false);
+  const [fileError, setFileError] = useState<string>('');
   const [processingResults, setProcessingResults] = useState<{
     totalRows?: number;
     rowsCleaned?: number;
@@ -165,14 +167,43 @@ export default function DataCatalogueModal({
     }
   }, [dataCatalogue, form]);
 
+  // File validation function
+  const validateFile = (file: File): { valid: boolean; error?: string } => {
+    const allowedExtensions = ['.xlsx', '.csv'];
+
+    // Check file extension
+    const fileName = file.name.toLowerCase();
+    const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
+
+    if (!hasValidExtension) {
+      return {
+        valid: false,
+        error: 'Invalid file type. Please upload only .xlsx or .csv files.'
+      };
+    }
+
+    return { valid: true };
+  };
+
   // File selection handlers
   const handleFileSelect = () => {
+    setFileError('');
     fileInputRef.current?.click();
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      const validation = validateFile(file);
+
+      if (!validation.valid) {
+        setFileError(validation.error || 'Invalid file');
+        setSelectedFile(null);
+        form.setValue('raw_file', '');
+        return;
+      }
+
+      setFileError('');
       setSelectedFile(file);
       // Set the file name in the form for display purposes
       form.setValue('raw_file', file.name);
@@ -183,8 +214,53 @@ export default function DataCatalogueModal({
     }
   };
 
+  // Drag and drop handlers
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      const validation = validateFile(file);
+
+      if (!validation.valid) {
+        setFileError(validation.error || 'Invalid file');
+        setSelectedFile(null);
+        form.setValue('raw_file', '');
+        return;
+      }
+
+      setFileError('');
+      setSelectedFile(file);
+      form.setValue('raw_file', file.name);
+      // Auto-advance to next step after a short delay
+      setTimeout(() => {
+        setCurrentStep(1);
+      }, 500);
+    }
+  };
+
   const handleFileRemove = () => {
     setSelectedFile(null);
+    setFileError('');
     form.setValue('raw_file', '');
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -250,28 +326,75 @@ export default function DataCatalogueModal({
       content: (
         <div>
           <h2 className="text-xl font-semibold mb-4">Upload File</h2>
-          
+
           {!selectedFile ? (
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center">
-              <p className="text-gray-600 mb-2">Choose a File or drag and drop it here (2MB)</p>
-              <p className="text-gray-500 text-sm mb-4">PDF, DOCX, XLSX, CSV</p>
-              <button 
-                onClick={handleFileSelect}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+            <>
+              <div
+                className={`border-2 border-dashed rounded-lg p-12 text-center transition-colors ${
+                  isDragging
+                    ? 'border-blue-500 bg-blue-50'
+                    : fileError
+                    ? 'border-red-300 bg-red-50'
+                    : 'border-gray-300 bg-white'
+                }`}
+                onDragEnter={handleDragEnter}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
               >
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                </svg>
-                Select File
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                onChange={handleFileChange}
-                accept=".pdf,.docx,.xlsx,.csv"
-                className="hidden"
-              />
-            </div>
+                <div className="flex flex-col items-center">
+                  <svg
+                    className={`w-12 h-12 mb-4 ${
+                      isDragging ? 'text-blue-500' : fileError ? 'text-red-400' : 'text-gray-400'
+                    }`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                    />
+                  </svg>
+                  <p className={`text-lg mb-2 font-medium ${
+                    isDragging ? 'text-blue-600' : fileError ? 'text-red-600' : 'text-gray-600'
+                  }`}>
+                    {isDragging ? 'Drop file here' : 'Choose a file or drag and drop it here'}
+                  </p>
+                  <p className="text-gray-500 text-sm mb-4">XLSX, CSV</p>
+                  <button
+                    onClick={handleFileSelect}
+                    className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                    </svg>
+                    Select File
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    onChange={handleFileChange}
+                    accept=".xlsx,.csv"
+                    className="hidden"
+                  />
+                </div>
+              </div>
+
+              {fileError && (
+                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start">
+                  <svg className="w-5 h-5 text-red-500 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                  <div>
+                    <p className="text-sm font-medium text-red-800">Upload Error</p>
+                    <p className="text-sm text-red-700 mt-1">{fileError}</p>
+                  </div>
+                </div>
+              )}
+            </>
           ) : (
             <div className="border border-gray-300 rounded-lg p-4 bg-gray-50">
               <div className="flex items-center">

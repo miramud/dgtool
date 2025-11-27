@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useMemo, useEffect } from 'react';
 import ReactFlow, {
   Node,
   Edge,
@@ -20,7 +20,14 @@ import 'reactflow/dist/style.css';
 import { nodeTypes, BaseNodeData } from './lineage/LineageNodes';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { RotateCcw, Info } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { RotateCcw, Info, Filter, X } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
 interface LineageTabProps {
@@ -47,6 +54,56 @@ interface LineageTabProps {
       };
     };
   };
+  isLoading?: boolean;
+}
+
+// Filter options
+type NodeTypeFilter = 'all' | 'source' | 'dataset' | 'etl';
+
+interface LineageFilters {
+  nodeType: NodeTypeFilter;
+  owner: string;
+}
+
+// Loading skeleton component
+function LineageSkeleton() {
+  return (
+    <div className="h-[400px] w-full bg-gray-50 rounded-lg border border-gray-200 p-4">
+      {/* Filter bar skeleton */}
+      <div className="flex items-center gap-4 mb-4">
+        <div className="h-9 w-32 bg-gray-200 rounded-md animate-pulse" />
+        <div className="h-9 w-32 bg-gray-200 rounded-md animate-pulse" />
+      </div>
+
+      {/* Flow skeleton */}
+      <div className="relative h-[300px] flex items-center justify-center">
+        {/* Skeleton nodes */}
+        <div className="flex items-center gap-8">
+          <div className="w-[140px] h-[60px] bg-gray-200 rounded-lg animate-pulse" />
+          <div className="w-16 h-0.5 bg-gray-200 animate-pulse" />
+          <div className="w-[140px] h-[60px] bg-gray-200 rounded-lg animate-pulse" />
+          <div className="w-16 h-0.5 bg-gray-200 animate-pulse" />
+          <div className="w-[140px] h-[60px] bg-gray-200 rounded-lg animate-pulse" />
+          <div className="w-16 h-0.5 bg-gray-200 animate-pulse" />
+          <div className="w-[140px] h-[60px] bg-gray-200 rounded-lg animate-pulse" />
+        </div>
+
+        {/* Controls skeleton */}
+        <div className="absolute top-2 left-2 flex flex-col gap-1">
+          <div className="w-8 h-8 bg-gray-200 rounded animate-pulse" />
+          <div className="w-8 h-8 bg-gray-200 rounded animate-pulse" />
+          <div className="w-8 h-8 bg-gray-200 rounded animate-pulse" />
+          <div className="w-8 h-8 bg-gray-200 rounded animate-pulse" />
+        </div>
+
+        {/* Panel skeleton */}
+        <div className="absolute top-2 right-2 bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+          <div className="w-20 h-7 bg-gray-200 rounded animate-pulse mb-2" />
+          <div className="w-28 h-4 bg-gray-200 rounded animate-pulse" />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // Generate dynamic nodes based on dataset data
@@ -182,15 +239,82 @@ const generateLineageEdges = (dataset: LineageTabProps['dataset']): Edge[] => {
 };
 
 function LineageFlow({ dataset }: LineageTabProps) {
-  const dynamicNodes = generateLineageNodes(dataset);
-  const dynamicEdges = generateLineageEdges(dataset);
-  
-  const [nodes, , onNodesChange] = useNodesState(dynamicNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(dynamicEdges);
+  // Memoize dynamic nodes and edges to prevent infinite re-renders
+  const dynamicNodes = useMemo(() => generateLineageNodes(dataset), [dataset]);
+  const dynamicEdges = useMemo(() => generateLineageEdges(dataset), [dataset]);
+
   const [selectedNode, setSelectedNode] = useState<Node<BaseNodeData> | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [filters, setFilters] = useState<LineageFilters>({
+    nodeType: 'all',
+    owner: 'all',
+  });
+  const [showFilters, setShowFilters] = useState(false);
 
   const { fitView } = useReactFlow();
+
+  // Get unique owners from nodes
+  const owners = useMemo(() => {
+    const ownerSet = new Set<string>();
+    dynamicNodes.forEach(node => {
+      if (node.data.details?.owner) {
+        ownerSet.add(node.data.details.owner);
+      }
+    });
+    return Array.from(ownerSet);
+  }, [dynamicNodes]);
+
+  // Filter nodes based on selected filters
+  const filteredNodes = useMemo(() => {
+    return dynamicNodes.filter(node => {
+      // Filter by node type
+      if (filters.nodeType !== 'all') {
+        const nodeTypeMap: Record<string, NodeTypeFilter> = {
+          'sourceNode': 'source',
+          'datasetNode': 'dataset',
+          'etlNode': 'etl',
+        };
+        if (nodeTypeMap[node.type || ''] !== filters.nodeType) {
+          return false;
+        }
+      }
+
+      // Filter by owner
+      if (filters.owner !== 'all' && node.data.details?.owner !== filters.owner) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [dynamicNodes, filters]);
+
+  // Filter edges to only show connections between visible nodes
+  const filteredEdges = useMemo(() => {
+    const visibleNodeIds = new Set(filteredNodes.map(n => n.id));
+    return dynamicEdges.filter(edge =>
+      visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target)
+    );
+  }, [dynamicEdges, filteredNodes]);
+
+  // Use the filtered nodes and edges directly with ReactFlow hooks
+  const [nodes, setNodes, onNodesChange] = useNodesState(filteredNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(filteredEdges);
+
+  // Update nodes and edges when filters change
+  useEffect(() => {
+    setNodes(filteredNodes);
+    setEdges(filteredEdges);
+    // Fit view after filter change
+    const timeoutId = setTimeout(() => fitView({ duration: 300, padding: 0.2 }), 50);
+    return () => clearTimeout(timeoutId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters]);
+
+  const hasActiveFilters = filters.nodeType !== 'all' || filters.owner !== 'all';
+
+  const clearFilters = () => {
+    setFilters({ nodeType: 'all', owner: 'all' });
+  };
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -210,59 +334,132 @@ function LineageFlow({ dataset }: LineageTabProps) {
   }, [fitView]);
 
   return (
-    <div className="h-[300px] w-full">
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        onNodeClick={onNodeClick}
-        nodeTypes={nodeTypes}
-        fitView
-        fitViewOptions={{
-          padding: 0.2
-        }}
-        attributionPosition="top-right"
-        proOptions={{
-          hideAttribution: true,
-        }}
-      >
-        {/* Background with grid pattern */}
-        <Background 
-          variant={BackgroundVariant.Dots} 
-          gap={20} 
-          size={1}
-          color="#e5e7eb"
-        />
-        
-        {/* Controls panel */}
-        <Controls
-          position="top-left"
-          showZoom={true}
-          showFitView={true}
-          showInteractive={true}
-        />
+    <div className="space-y-4">
+      {/* Filter Bar */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowFilters(!showFilters)}
+          className={`flex items-center gap-2 ${hasActiveFilters ? 'border-[#4A4A7A] text-[#4A4A7A]' : ''}`}
+        >
+          <Filter className="w-4 h-4" />
+          Filters
+          {hasActiveFilters && (
+            <span className="ml-1 px-1.5 py-0.5 bg-[#4A4A7A] text-white text-xs rounded-full">
+              {(filters.nodeType !== 'all' ? 1 : 0) + (filters.owner !== 'all' ? 1 : 0)}
+            </span>
+          )}
+        </Button>
 
-        {/* Custom panel with reset button and instructions */}
-        <Panel position="top-right" className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
-          <div className="flex flex-col gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleReset}
-              className="flex items-center gap-2 text-xs"
+        {showFilters && (
+          <>
+            <Select
+              value={filters.nodeType}
+              onValueChange={(value: NodeTypeFilter) => setFilters(f => ({ ...f, nodeType: value }))}
             >
-              <RotateCcw className="w-3 h-3" />
-              Reset View
-            </Button>
-            <div className="text-xs text-gray-600 flex items-center gap-1">
-              <Info className="w-3 h-3" />
-              Click nodes for details
+              <SelectTrigger className="w-[140px] h-9">
+                <SelectValue placeholder="Node Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="source">Source</SelectItem>
+                <SelectItem value="dataset">Dataset</SelectItem>
+                <SelectItem value="etl">ETL Pipeline</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={filters.owner}
+              onValueChange={(value) => setFilters(f => ({ ...f, owner: value }))}
+            >
+              <SelectTrigger className="w-[160px] h-9">
+                <SelectValue placeholder="Owner" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Owners</SelectItem>
+                {owners.map(owner => (
+                  <SelectItem key={owner} value={owner}>{owner}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearFilters}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="w-4 h-4 mr-1" />
+                Clear
+              </Button>
+            )}
+          </>
+        )}
+
+        {hasActiveFilters && !showFilters && (
+          <span className="text-sm text-gray-500">
+            Showing {filteredNodes.length} of {dynamicNodes.length} nodes
+          </span>
+        )}
+      </div>
+
+      {/* React Flow */}
+      <div className="h-[350px] w-full border border-gray-200 rounded-lg overflow-hidden">
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          onNodeClick={onNodeClick}
+          nodeTypes={nodeTypes}
+          fitView
+          fitViewOptions={{
+            padding: 0.2
+          }}
+          attributionPosition="top-right"
+          proOptions={{
+            hideAttribution: true,
+          }}
+        >
+          {/* Background with grid pattern */}
+          <Background
+            variant={BackgroundVariant.Dots}
+            gap={20}
+            size={1}
+            color="#e5e7eb"
+          />
+
+          {/* Controls panel */}
+          <Controls
+            position="top-left"
+            showZoom={true}
+            showFitView={true}
+            showInteractive={true}
+          />
+
+          {/* Custom panel with reset button and instructions */}
+          <Panel position="top-right" className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+            <div className="flex flex-col gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleReset}
+                className="flex items-center gap-2 text-xs"
+              >
+                <RotateCcw className="w-3 h-3" />
+                Reset View
+              </Button>
+              <div className="text-xs text-gray-600 flex items-center gap-1">
+                <Info className="w-3 h-3" />
+                Hover for summary
+              </div>
             </div>
-          </div>
-        </Panel>
-      </ReactFlow>
+          </Panel>
+        </ReactFlow>
+      </div>
 
       {/* Node Details Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
@@ -423,10 +620,16 @@ function LineageFlow({ dataset }: LineageTabProps) {
   );
 }
 
-export default function LineageTab(props: LineageTabProps) {
+export default function LineageTab({ dataset, isLoading }: LineageTabProps) {
+  if (isLoading) {
+    return <LineageSkeleton />;
+  }
+
   return (
-    <ReactFlowProvider>
-      <LineageFlow {...props} />
-    </ReactFlowProvider>
+    <div className="p-4">
+      <ReactFlowProvider>
+        <LineageFlow dataset={dataset} />
+      </ReactFlowProvider>
+    </div>
   );
 }

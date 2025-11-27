@@ -16,8 +16,19 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-// import { Button } from "@/components/ui/button";
-import { Check } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
+import {
+  SeverityBadge,
+  ActionBadge,
+  QualityMessage,
+  SeverityLevel,
+} from "./DataQualityStatus";
+import {
+  SuccessRateCard,
+  InconsistencyCard,
+  ProcessingSummaryCard,
+  EmptyStateCard,
+} from "./QualityMetricCard";
 
 interface DataQualityTabProps {
   dataset: any;
@@ -79,21 +90,7 @@ export default function DataQualityTab({ dataset }: DataQualityTabProps) {
           </span>
         );
       case "severity":
-        const severityColors = {
-          HIGH: "bg-red-100 text-red-800",
-          MEDIUM: "bg-yellow-100 text-yellow-800",
-          LOW: "bg-green-100 text-green-800",
-        };
-        return (
-          <span
-            className={`px-2 py-1 text-xs rounded-md ${
-              severityColors[item.severity as keyof typeof severityColors] ||
-              "bg-gray-100 text-gray-800"
-            }`}
-          >
-            {item.severity}
-          </span>
-        );
+        return <SeverityBadge severity={item.severity as SeverityLevel} />;
       case "original_value":
         // Check if it's a composite value (contains = and ,)
         if (
@@ -127,37 +124,9 @@ export default function DataQualityTab({ dataset }: DataQualityTabProps) {
           </span>
         );
       case "action_taken":
-        const actionColors = {
-          MANUAL_REVIEW_REQUIRED: "bg-orange-100 text-orange-800",
-          TYPE_CONVERTED: "bg-blue-100 text-blue-800",
-          CORRECTED: "bg-green-100 text-green-800",
-          REJECTED: "bg-red-100 text-red-800",
-        };
-        return (
-          <span
-            className={`px-2 py-1 text-xs rounded-md ${
-              actionColors[item.action_taken as keyof typeof actionColors] ||
-              "bg-gray-100 text-gray-800"
-            }`}
-          >
-            {item.action_taken.replace(/_/g, " ")}
-          </span>
-        );
+        return <ActionBadge action={item.action_taken} />;
       default:
         return null;
-    }
-  };
-
-  const formatStatusDisplay = (status: string) => {
-    switch (status) {
-      case "IN_PROGRESS":
-        return "In Progress";
-      case "COMPLETED":
-        return "Completed";
-      case "FAILED":
-        return "Failed";
-      default:
-        return status;
     }
   };
 
@@ -297,118 +266,85 @@ export default function DataQualityTab({ dataset }: DataQualityTabProps) {
   return (
     <div className='p-4 space-y-8'>
       {/* Quality Metrics Section */}
-      <div>
-        <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
-          {/* Success Rate */}
-          <div className='bg-white p-6 border border-gray-200 rounded-lg'>
-            <h4 className='text-sm font-medium text-gray-900 mb-2'>
-              Success Rate:
-            </h4>
-            <div className='text-4xl font-bold text-gray-900'>
-              {cleanupSession?.success_rate
-                ? `${Math.round(cleanupSession.success_rate)}%`
-                : "N/A"}
-            </div>
-          </div>
-
-          {/* Total Inconsistencies */}
-          <div className='bg-white p-6 border border-gray-200 rounded-lg'>
-            <h4 className='text-sm font-medium text-gray-900 mb-2'>
-              Total Inconsistencies:
-            </h4>
-            <div className='text-4xl font-bold text-gray-900'>
-              {cleanupSession?.total_inconsistencies || 0}
-            </div>
-            <div className='text-sm text-gray-600 mt-1'>issues detected</div>
-          </div>
-
-          {/* Processing Status and Summary */}
-          <div className='bg-white p-6 border border-gray-200 rounded-lg'>
-            <div className='space-y-4'>
-              {/* Processing Status */}
-              <div>
-                <h4 className='text-sm font-bold text-gray-900 mb-1'>
-                  Status:
-                </h4>
-                <div className='text-gray-600 text-sm'>
-                  {cleanupSession?.status
-                    ? formatStatusDisplay(cleanupSession.status)
-                    : "Unknown"}
-                </div>
-              </div>
-
-              {/* Rows Processed */}
-              <div>
-                <h4 className='text-sm font-bold text-gray-900 mb-1'>
-                  Rows Processed:
-                </h4>
-                <div className='text-gray-600 text-sm'>
-                  {cleanupSession?.total_rows_processed?.toLocaleString() || 0}{" "}
-                  total
-                </div>
-              </div>
-
-              {/* Rows Cleaned vs Rejected */}
-              <div>
-                <h4 className='text-sm font-bold text-gray-900 mb-1'>
-                  Cleaned/Rejected:
-                </h4>
-                <div className='text-gray-600 text-sm'>
-                  {cleanupSession?.total_rows_cleaned?.toLocaleString() || 0}{" "}
-                  cleaned,{" "}
-                  {cleanupSession?.total_rows_rejected?.toLocaleString() || 0}{" "}
-                  rejected
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
+        <SuccessRateCard rate={cleanupSession?.success_rate} />
+        <InconsistencyCard count={cleanupSession?.total_inconsistencies || 0} />
+        <ProcessingSummaryCard
+          status={cleanupSession?.status}
+          totalRowsProcessed={cleanupSession?.total_rows_processed}
+          totalRowsCleaned={cleanupSession?.total_rows_cleaned}
+          totalRowsRejected={cleanupSession?.total_rows_rejected}
+        />
       </div>
 
       {/* Data Quality Issues Table Section */}
-      <div>
-        <div className='mb-4'>
+      <div className="space-y-4">
+        <div>
           <h3 className='text-lg font-medium text-gray-900'>
             Data Quality Issues
           </h3>
-          <p className='text-sm text-gray-600'>
-            {inconsistenciesData.length > 0
-              ? `Found ${inconsistenciesData.length} inconsistencies that require attention`
-              : "No data quality issues found"}
-          </p>
         </div>
-        <AdvancedTable
-          data={inconsistenciesData}
-          columns={columns}
-          isLoading={isLoading}
-          showCheckBox={false}
-          getFormattedValue={getFormattedValue}
-        />
+
+        {/* Status Message */}
+        {inconsistenciesData.length > 0 ? (
+          <QualityMessage
+            type="warning"
+            title={`${inconsistenciesData.length} inconsistencies detected`}
+            description="Review the issues below and take appropriate action to improve data quality."
+          />
+        ) : (
+          <QualityMessage
+            type="success"
+            title="No data quality issues found"
+            description="Your dataset passed all quality checks successfully."
+          />
+        )}
+
+        {inconsistenciesData.length > 0 && (
+          <AdvancedTable
+            data={inconsistenciesData}
+            columns={columns}
+            isLoading={isLoading}
+            showCheckBox={false}
+            getFormattedValue={getFormattedValue}
+          />
+        )}
       </div>
 
       {/* Duplicate Issues Table Section */}
-      <div>
-        <div className='mb-4'>
+      <div className="space-y-4">
+        <div>
           <h3 className='text-lg font-medium text-gray-900'>
             Duplicate Issues
           </h3>
-          <p className='text-sm text-gray-600'>
-            {getUniqueGroups().length > 0
-              ? `Found ${
-                  getUniqueGroups().length
-                } groups with duplicate records that require attention. Click on any row to see all duplicates.`
-              : "No duplicate issues found"}
-          </p>
         </div>
-        <AdvancedTable
-          data={getUniqueGroups()}
-          columns={duplicate_columns}
-          isLoading={isDuplicatesLoading}
-          showCheckBox={false}
-          onRowClick={handleRowClick}
-          getFormattedValue={getFormattedDuplicateValue}
-          className='cursor-pointer'
-        />
+
+        {/* Status Message */}
+        {getUniqueGroups().length > 0 ? (
+          <QualityMessage
+            type="warning"
+            title={`${getUniqueGroups().length} duplicate groups detected`}
+            description="Click on any row to view all duplicates in that group and take action."
+          />
+        ) : (
+          <QualityMessage
+            type="success"
+            title="No duplicate issues found"
+            description="No duplicate records were detected in your dataset."
+          />
+        )}
+
+        {getUniqueGroups().length > 0 && (
+          <AdvancedTable
+            data={getUniqueGroups()}
+            columns={duplicate_columns}
+            isLoading={isDuplicatesLoading}
+            showCheckBox={false}
+            onRowClick={handleRowClick}
+            getFormattedValue={getFormattedDuplicateValue}
+            className='cursor-pointer'
+          />
+        )}
       </div>
 
       {/* Duplicate Details Modal */}
@@ -447,18 +383,11 @@ export default function DataQualityTab({ dataset }: DataQualityTabProps) {
               </div>
             ) : !duplicateGroupData?.data ||
               duplicateGroupData.data.duplicate_records.length === 0 ? (
-              <div className='text-center py-8'>
-                <div className='mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100'>
-                  <Check className='h-6 w-6 text-green-600' />
-                </div>
-                <h3 className='mt-2 text-sm font-medium text-gray-900'>
-                  All duplicates processed
-                </h3>
-                <p className='mt-1 text-sm text-gray-500'>
-                  All duplicate entries have been either retained or removed
-                  from the system.
-                </p>
-              </div>
+              <EmptyStateCard
+                icon={CheckCircle2}
+                title="All duplicates processed"
+                description="All duplicate entries have been either retained or removed from the system."
+              />
             ) : (
               duplicateGroupData.data.duplicate_records.map((duplicate) => {
                 let rowData = {};
@@ -495,10 +424,8 @@ export default function DataQualityTab({ dataset }: DataQualityTabProps) {
                         <span className='text-sm font-medium text-gray-500'>
                           Status:
                         </span>
-                        <p className='text-sm text-gray-900'>
-                          <span className='px-2 py-1 text-xs rounded-md bg-orange-100 text-orange-800'>
-                            MANUAL REVIEW REQUIRED
-                          </span>
+                        <p className='text-sm text-gray-900 mt-1'>
+                          <ActionBadge action="MANUAL_REVIEW_REQUIRED" />
                         </p>
                       </div>
                       <div>

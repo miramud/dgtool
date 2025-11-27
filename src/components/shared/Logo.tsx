@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { LANDING_ROUTES } from "@/constants/routes";
 
 interface LogoProps {
     variant?: "default" | "light";
@@ -9,7 +10,7 @@ interface LogoProps {
 
 export default function Logo({ variant = "default", className }: LogoProps) {
     return (
-        <Link href="/" className="inline-block">
+        <Link href={LANDING_ROUTES.HOME} className="inline-block">
             <Image
                 src="/images/logo.svg"
                 alt="Data Loom Logo"

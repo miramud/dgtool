@@ -1,0 +1,9 @@
+export enum DASHBOARD_API_ROUTES {
+  STATS = "/reports/stats",
+  BUSINESS_DOMAIN_CHART = "/reports/charts/buisiness-domain",
+}
+
+export const DASHBOARD_ROUTES = {
+  STATS: DASHBOARD_API_ROUTES.STATS,
+  BUSINESS_DOMAIN_CHART: DASHBOARD_API_ROUTES.BUSINESS_DOMAIN_CHART,
+};

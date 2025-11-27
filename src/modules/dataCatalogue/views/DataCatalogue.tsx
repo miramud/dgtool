@@ -24,6 +24,7 @@ import AdvancedTable from "../../../components/shared/AdvancedTable";
 import StatusBadge from "../../../components/shared/StatusBadge";
 import { BusinessDescription } from "../types/dataCatalogue";
 import type { DataCatalogue } from "../types/dataCatalogue";
+import IssueBadge from "../components/IssueBadge";
 import {
   useGetDataCatalogue,
   useDeleteDataCatalogue,
@@ -145,7 +146,12 @@ export default function DataCatalogue({
   const getFormattedValue = (item: DataCatalogue, columnKey: string) => {
     switch (columnKey) {
       case "businessTechnicalSpecification":
-        return <span className='text-gray-900'>{item.name}</span>;
+        return (
+          <div className="flex items-center gap-2">
+            <span className='text-gray-900'>{item.name}</span>
+            <IssueBadge datasetId={item.id} showCount={false} />
+          </div>
+        );
       case "businessDescription":
         return <span className='text-gray-900'>{item.description}</span>;
       case "usageGuidelines":

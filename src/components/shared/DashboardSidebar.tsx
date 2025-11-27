@@ -71,13 +71,16 @@ const mainNavItems: NavItem[] = [
       { title: "Audit Logs", href: "/dashboard/audit-logs" },
     ],
   },
-  {
-    title: "Workflow & Automation",
-    href: "/dashboard/workflow",
-    icon: Settings,
-    hasDropdown: true,
-    subItems: [],
-  },
+  // {
+  //   title: "Workflow",
+  //   href: "/dashboard/workflow",
+  //   icon: Settings,
+  //   hasDropdown: true,
+  //   subItems: [
+  //     { title: "Configure Workflows", href: "/dashboard/workflows" },
+  //     { title: "Task Manager", href: "/dashboard/task-manager" },
+  //   ],
+  // },
   {
     title: "Policy & Standards",
     href: "/dashboard/policy-and-standards",
