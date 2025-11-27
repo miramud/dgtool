@@ -146,16 +146,16 @@ export default function DashboardSidebar() {
           <div className='flex items-center'>
             <div className='w-8 h-8 bg-white rounded-lg flex items-center justify-center mr-3'>
               <span style={{ color: "#544587" }} className='font-bold text-lg'>
-                DL
+                ST
               </span>
             </div>
-            <span className='text-xl font-medium'>Data Loom</span>
+            <span className='text-xl font-medium'>StewardCore</span>
           </div>
         )}
         {isCollapsed && (
           <div className='w-8 h-8 bg-white rounded-lg flex items-center justify-center'>
             <span style={{ color: "#544587" }} className='font-bold text-lg'>
-              DL
+              ST
             </span>
           </div>
         )}

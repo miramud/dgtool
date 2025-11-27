@@ -13,7 +13,7 @@ export default function Logo({ variant = "default", className }: LogoProps) {
         <Link href={LANDING_ROUTES.HOME} className="inline-block">
             <Image
                 src="/images/logo.svg"
-                alt="Data Loom Logo"
+                alt="StewardCore Logo"
                 width={200}
                 height={200}
                 className={cn(

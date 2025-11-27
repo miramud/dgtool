@@ -81,7 +81,7 @@ export default function LandingHeader() {
                     <div className="w-full px-4 py-4 flex justify-between items-center border-b border-border">
                         <Image
                             src="/images/logo.svg"
-                            alt="Data Loom Logo"
+                            alt="StewardCore Logo"
                             width={150}
                             height={150}
                             className="w-[100px]"

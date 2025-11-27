@@ -2,11 +2,11 @@ import DatasetTypeManagement from "@/modules/metadataLibrary/views/DatasetTypeMa
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Dataset Types - Data Governance Tool",
-  description:
-    "Manage and organize different types of datasets in your data catalog. Define dataset categories to standardize data classification.",
+    title: "Dataset Types - StewardCore",
+    description:
+        "Manage and organize different types of datasets in your data catalog. Define dataset categories to standardize data classification.",
 };
 
 export default function DatasetTypesPage() {
-  return <DatasetTypeManagement />;
+    return <DatasetTypeManagement />;
 }

@@ -11,8 +11,8 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-    title: "Data Governance Tool",
-    description: "Data governance tool",
+    title: "StewardCore",
+    description: "StewardCore",
 };
 
 export default function RootLayout({

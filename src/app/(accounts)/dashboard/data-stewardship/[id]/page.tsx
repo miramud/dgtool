@@ -2,19 +2,19 @@ import DataSetAssignmentView from "@/modules/dataStewardShip/views/DataSetAssign
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Data SetAssignment View - Data Governance Tool",
-  description:
-    "View detailed information about a specific dataset including metadata, lineage, and access permissions.",
+    title: "Data SetAssignment View - StewardCore",
+    description:
+        "View detailed information about a specific dataset including metadata, lineage, and access permissions.",
 };
 
 interface DataSetAssignmentViewPageProps {
-  params: {
-    id: string;
-  };
+    params: {
+        id: string;
+    };
 }
 
 export default function DataSetAssignmentViewPage({
-  params,
+    params,
 }: DataSetAssignmentViewPageProps) {
-  return <DataSetAssignmentView datasetId={params.id} />;
+    return <DataSetAssignmentView datasetId={params.id} />;
 }

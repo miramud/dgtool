@@ -52,7 +52,7 @@ export default function SignInClient() {
     <Fragment>
       <AuthFormHeader
         title='Welcome'
-        description='Log in to continue your DataLoom journey'
+        description='Log in to continue your StewardCore journey'
       />
 
       <Form {...form}>
