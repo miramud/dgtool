@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { toast } from "sonner";
 import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import FormInput from "@/components/shared/FormInput";
@@ -22,6 +24,8 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export default function ContactUsPageClient() {
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
         defaultValues: {
@@ -35,8 +39,30 @@ export default function ContactUsPageClient() {
     });
 
     const onSubmit: SubmitHandler<FormValues> = async (data) => {
-        console.log(data);
-        // Handle form submission
+        setIsSubmitting(true);
+
+        try {
+            const response = await fetch("/api/contact", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(data),
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                toast.success(result.message || "Message sent successfully!");
+                form.reset();
+            } else {
+                toast.error(result.message || "Failed to send message. Please try again.");
+            }
+        } catch (error) {
+            toast.error("An error occurred. Please try again later.");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -108,9 +134,9 @@ export default function ContactUsPageClient() {
                                     <Button
                                         type="submit"
                                         className="w-full md:w-3/5"
-                                        disabled={!form.formState.isValid}
+                                        disabled={!form.formState.isValid || isSubmitting}
                                     >
-                                        Send Message
+                                        {isSubmitting ? "Sending..." : "Send Message"}
                                     </Button>
                                 </div>
                             </form>

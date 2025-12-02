@@ -9,26 +9,28 @@ import { LandingTestimonialsSection } from "@/modules/landing/components/Testimo
 import { Fragment, useEffect } from "react";
 import AOS from "aos";
 import "aos/dist/aos.css";
+import LandingTrustedPartners from "./TrustedPartners";
 
 export default function LandingPageClient() {
-    useEffect(() => {
-        AOS.init({
-            duration: 500,
-            easing: "ease-out-cubic",
-            once: false,
-            disable: "phone",
-        });
-    }, []);
+  useEffect(() => {
+    AOS.init({
+      duration: 500,
+      easing: "ease-out-cubic",
+      once: false,
+      disable: "phone",
+    });
+  }, []);
 
-    return (
-        <Fragment>
-            <LandingHeroSection />
-            <LandingPropositionSection />
-            <LandingFeatureSection />
-            <LandingTestimonialsSection />
-            <LandingProcessSection />
-            <LandingPricingSection />
-            <LandingCtaSection />
-        </Fragment>
-    );
+  return (
+    <Fragment>
+      <LandingHeroSection />
+      <LandingPropositionSection />
+      <LandingFeatureSection />
+      <LandingTestimonialsSection />
+      <LandingTrustedPartners />
+      <LandingProcessSection />
+      <LandingPricingSection />
+      <LandingCtaSection />
+    </Fragment>
+  );
 }
