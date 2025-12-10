@@ -6,7 +6,7 @@ import Image from "next/image";
 import { X } from "lucide-react";
 import Logo from "@/components/shared/Logo";
 import Link from "next/link";
-import { AUTH_ROUTES } from "@/constants/routes";
+import { AUTH_ROUTES, LANDING_ROUTES } from "@/constants/routes";
 
 export default function LandingHeader() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -33,11 +33,11 @@ export default function LandingHeader() {
                     </nav>
 
                     <div className="hidden md:flex items-center space-x-3 text-base">
-                        <Link href={AUTH_ROUTES.SIGN_UP}>
-                            <Button size="lg">Sign Up</Button>
+                        <Link href={LANDING_ROUTES.CONTACT}>
+                            <Button size="lg">Book Demo</Button>
                         </Link>
 
-                        <Link href={AUTH_ROUTES.SIGN_IN}>
+                        {/* <Link href={AUTH_ROUTES.SIGN_IN}>
                             <Button
                                 variant="outline"
                                 size="lg"
@@ -45,7 +45,7 @@ export default function LandingHeader() {
                             >
                                 Sign In
                             </Button>
-                        </Link>
+                        </Link> */}
                     </div>
 
                     <button

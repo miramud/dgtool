@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { AUTH_ROUTES } from "@/constants/routes";
+import { LANDING_ROUTES } from "@/constants/routes";
 import Link from "next/link";
 
 export function LandingCtaSection() {
@@ -21,15 +21,15 @@ export function LandingCtaSection() {
                             Try it free for 14 days. No credit card required.
                         </p>
                         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                            <Link href={AUTH_ROUTES.SIGN_UP}>
+                            {/* <Link href={AUTH_ROUTES.SIGN_UP}>
                                 <Button
                                     size="lg"
                                     className="bg-white text-primary hover:bg-gray-100"
                                 >
                                     Start Free Trial
                                 </Button>
-                            </Link>
-                            <Link href={AUTH_ROUTES.SIGN_UP}>
+                            </Link> */}
+                            <Link href={LANDING_ROUTES.CONTACT}>
                                 <Button
                                     size="lg"
                                     variant="outline"
