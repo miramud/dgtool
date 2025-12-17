@@ -43,6 +43,7 @@ export interface IUser {
   last_name: string;
   email: string;
   mobile_number: string | null;
+  profile_picture?: string;
   created_datetime: string;
   updated_datetime: string;
   roles?: Array<{

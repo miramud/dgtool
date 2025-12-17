@@ -6,7 +6,7 @@ export function LandingCtaSection() {
     return (
         <div className="bg-gray-50 py-20" data-aos="fade-in">
             <div className="container">
-                <section className="relative py-20 bg-gradient-to-r from-primary to-purple-600 text-white overflow-hidden">
+                <section className="relative py-20 bg-gradient-to-r from-primary to-purple-300 text-white overflow-hidden">
                     <div className="absolute -top-24 -left-24 w-[250px] h-[250px] bg-white rounded-full blur-[80px] opacity-60 animate-pulse"></div>
                     <div className="absolute -bottom-28 -right-28 w-[280px] h-[280px] bg-white rounded-full blur-[90px] opacity-55 animate-pulse"></div>
                     <div className="absolute top-1/4 left-1/3 w-[200px] h-[200px] bg-white rounded-full blur-[70px] opacity-50 animate-pulse"></div>

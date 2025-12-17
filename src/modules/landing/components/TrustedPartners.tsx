@@ -11,7 +11,7 @@ export default function LandingTrustedPartners() {
             <span className="lg:block">with 100+ companies</span>
           </p>
 
-          <div className="w-full flex-1 grid grid-cols-2 sm:grid-cols-3 lg:flex lg:items-center lg:justify-between gap-4 sm:gap-6 lg:gap-4">
+          <div className="w-full flex-1 grid grid-cols-2 sm:grid-cols-3 lg:flex lg:items-center lg:justify-between gap-6 sm:gap-8 lg:gap-6">
             {partners.map((logo, index) => (
               <div key={index} className="flex items-center justify-center">
                 <Image
@@ -19,7 +19,7 @@ export default function LandingTrustedPartners() {
                   alt={`Partner ${index + 1}`}
                   width={1000}
                   height={1000}
-                  className="w-auto h-8 sm:h-10 md:h-12 object-contain grayscale opacity-60 hover:grayscale-0 hover:opacity-100 transition-all duration-300 ease-in-out"
+                  className="w-full h-16 sm:h-20 md:h-24 lg:h-20 object-contain transition-all duration-300 ease-in-out"
                 />
               </div>
             ))}

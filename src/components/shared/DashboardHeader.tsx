@@ -1,9 +1,10 @@
 "use client";
-import { Bell, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
+import Image from "next/image";
 import { useUserProfile } from "@/modules/userManagement/controllers/userController";
+import NotificationDropdown from "./NotificationDropdown";
 
 export default function DashboardHeader() {
   const pathname = usePathname();
@@ -55,28 +56,35 @@ export default function DashboardHeader() {
         </nav>
 
         <div className='flex items-center space-x-4'>
-          <Button variant='ghost' size='icon' className='relative'>
-            <Bell className='h-5 w-5' />
-            <span className='absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full'></span>
-          </Button>
+          <NotificationDropdown />
 
           <div className='flex items-center space-x-3'>
-            <div className='w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center'>
-              <span className='text-sm font-medium text-gray-700'>
-                {!isMounted || isLoading
-                  ? "..."
-                  : profile
-                  ? `${profile.first_name.charAt(0)}${profile.last_name.charAt(
-                      0
-                    )}`
-                  : "U"}
-              </span>
+            <div className='w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center overflow-hidden'>
+              {!isMounted || isLoading ? (
+                <span className='text-sm font-medium text-gray-700'>...</span>
+              ) : profile?.profile_picture ? (
+                <Image
+                  src={profile.profile_picture}
+                  alt={`${profile.first_name} ${profile.last_name}`}
+                  width={32}
+                  height={32}
+                  className='w-full h-full object-cover'
+                />
+              ) : (
+                <span className='text-sm font-medium text-gray-700'>
+                  {profile && profile.first_name && profile.last_name
+                    ? `${profile.first_name.charAt(0)}${profile.last_name.charAt(
+                        0
+                      )}`
+                    : "U"}
+                </span>
+              )}
             </div>
             <div className='text-sm'>
               <p className='font-medium text-gray-900'>
                 {!isMounted || isLoading
                   ? "Loading..."
-                  : profile
+                  : profile && profile.first_name && profile.last_name
                   ? `${profile.first_name} ${profile.last_name}`
                   : "User"}
               </p>

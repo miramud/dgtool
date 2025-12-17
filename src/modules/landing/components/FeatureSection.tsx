@@ -3,21 +3,21 @@ import { features } from "../data/features";
 
 export function LandingFeatureSection() {
     return (
-        <section className="py-20 bg-[#F8FDF6E5] relative overflow-hidden">
-            <div className="absolute -top-20 -right-20 w-[350px] h-[350px] bg-primary rounded-full filter blur-[40px] opacity-90 -z-10"></div>
-            <div className="absolute -top-28 -right-28 w-[250px] h-[250px] bg-primary rounded-full filter blur-[60px] opacity-70 -z-20"></div>
-            <div className="absolute -top-36 -right-36 w-[150px] h-[150px] bg-primary rounded-full filter blur-[80px] opacity-50 -z-30"></div>
+        <section className="py-20 bg-primary relative overflow-hidden">
+            <div className="absolute -top-20 -right-20 w-[350px] h-[350px] bg-white rounded-full filter blur-[40px] opacity-10 -z-10"></div>
+            <div className="absolute -top-28 -right-28 w-[250px] h-[250px] bg-white rounded-full filter blur-[60px] opacity-10 -z-20"></div>
+            <div className="absolute -top-36 -right-36 w-[150px] h-[150px] bg-white rounded-full filter blur-[80px] opacity-10 -z-30"></div>
 
-            <div className="absolute -bottom-20 -left-20 w-[350px] h-[350px] bg-primary rounded-full filter blur-[40px] opacity-90 -z-10"></div>
-            <div className="absolute -bottom-28 -left-28 w-[250px] h-[250px] bg-primary rounded-full filter blur-[60px] opacity-70 -z-20"></div>
-            <div className="absolute -bottom-36 -left-36 w-[150px] h-[150px] bg-primary rounded-full filter blur-[80px] opacity-50 -z-30"></div>
+            <div className="absolute -bottom-20 -left-20 w-[350px] h-[350px] bg-white rounded-full filter blur-[40px] opacity-10 -z-10"></div>
+            <div className="absolute -bottom-28 -left-28 w-[250px] h-[250px] bg-white rounded-full filter blur-[60px] opacity-10 -z-20"></div>
+            <div className="absolute -bottom-36 -left-36 w-[150px] h-[150px] bg-white rounded-full filter blur-[80px] opacity-10 -z-30"></div>
 
             <div className="container mx-auto px-4 relative z-10">
                 <div className="text-center md:mb-16">
-                    <p className="text-primary font-medium text-lg">
+                    <p className="text-white font-medium text-lg">
                         Product Features
                     </p>
-                    <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+                    <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
                         Everything You Need for Smarter Governance
                     </h2>
                 </div>
@@ -32,10 +32,10 @@ export function LandingFeatureSection() {
                                 className="hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex-col items-center"
                                 style={{ marginTop: "15px" }}
                             >
-                                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-                                    <Icon className="w-8 h-8 text-primary" />
+                                <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <Icon className="w-8 h-8 text-white" />
                                 </div>
-                                {i < features.length - 1 && <ArrowDown />}
+                                {i < features.length - 1 && <ArrowDown className="text-white" />}
                             </div>
 
                             <div
@@ -45,10 +45,10 @@ export function LandingFeatureSection() {
                                         : "md:mr-[calc(50%+80px)] text-left"
                                 }`}
                             >
-                                <h3 className="text-2xl font-medium mb-2 whitespace-pre-line">
+                                <h3 className="text-2xl font-medium mb-2 whitespace-pre-line text-white">
                                     {title}
                                 </h3>
-                                <p className="text-muted-foreground whitespace-pre-line">
+                                <p className="text-white/90 whitespace-pre-line">
                                     {description}
                                 </p>
                             </div>

@@ -89,3 +89,30 @@ export interface UpdateStaffRequest {
 export interface AssignRolesRequest {
   role_ids: string[];
 }
+
+// User profile types
+export interface UserProfile {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  mobile_number: string;
+  is_active: boolean;
+  profile_picture?: string;
+  created_datetime: string;
+  updated_datetime: string;
+}
+
+export interface UpdateProfileRequest {
+  first_name: string;
+  last_name: string;
+  email: string;
+  mobile_number: string;
+  profile_picture?: string;
+  password?: string;
+}
+
+export interface UpdatePasswordRequest {
+  old_password: string;
+  new_password: string;
+}

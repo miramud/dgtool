@@ -6,6 +6,7 @@ import {
   Users,
   Shield,
   Settings,
+  Bell,
   HelpCircle,
   LogOut,
   ChevronLeft,
@@ -13,6 +14,7 @@ import {
   ChevronDown,
   Grid3X3,
   Notebook,
+  Logs,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -68,7 +70,6 @@ const mainNavItems: NavItem[] = [
     subItems: [
       { title: "Role Management", href: "/admin/roles" },
       { title: "User Management", href: "/admin/users" },
-      { title: "Audit Logs", href: "/dashboard/audit-logs" },
     ],
   },
   // {
@@ -88,6 +89,13 @@ const mainNavItems: NavItem[] = [
     hasDropdown: false,
     subItems: [],
   },
+  {
+    title: "Audit Logs",
+    href: "/dashboard/audit-logs",
+    icon: Logs,
+    hasDropdown: false,
+    subItems: [],
+  },
 ];
 
 const settingsNavItems: NavItem[] = [
@@ -95,6 +103,11 @@ const settingsNavItems: NavItem[] = [
     title: "Settings",
     href: "/dashboard/settings",
     icon: Settings,
+  },
+  {
+    title: "Notifications",
+    href: "/dashboard/notifications",
+    icon: Bell,
   },
 ];
 

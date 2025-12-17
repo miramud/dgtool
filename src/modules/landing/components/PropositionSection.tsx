@@ -3,7 +3,7 @@ import { propositions } from "../data/propositions";
 
 export function LandingPropositionSection() {
     return (
-        <section className="py-16 sm:py-20 bg-[#F8FDF6E5] md:mt-120 overflow-hidden">
+        <section className="py-16 sm:py-20 bg-white md:mt-120 overflow-hidden">
             <div className="container">
                 <div className="text-center mb-12 sm:mb-16">
                     <p className="text-primary font-medium text-base sm:text-lg mb-2">

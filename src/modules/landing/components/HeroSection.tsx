@@ -6,15 +6,15 @@ import Link from "next/link";
 
 export function LandingHeroSection() {
     return (
-        <section className="relative bg-gradient-to-br from-primary via-[#3F3465] to-purple-800 text-white h-screen">
-            <div className="absolute top-10 left-10 w-72 h-72 bg-white rounded-full filter blur-[100px] opacity-40 animate-pulse"></div>
-            <div className="absolute top-40 right-20 w-96 h-96 bg-white rounded-full filter blur-[120px] opacity-30 animate-pulse"></div>
-            <div className="absolute bottom-20 left-1/4 w-80 h-80 bg-white rounded-full filter blur-[120px] opacity-35 animate-pulse"></div>
-            <div className="absolute bottom-10 right-1/3 w-64 h-64 bg-white rounded-full filter blur-[100px] opacity-25 animate-pulse"></div>
+        <section className="relative bg-gradient-to-br from-[#F8F7FB] via-[#EFEBF7] to-[#f8f7fc] text-foreground h-screen">
+            <div className="absolute top-10 left-10 w-72 h-72 bg-primary rounded-full filter blur-[100px] opacity-20 animate-pulse"></div>
+            <div className="absolute top-40 right-20 w-96 h-96 bg-primary rounded-full filter blur-[120px] opacity-15 animate-pulse"></div>
+            <div className="absolute bottom-20 left-1/4 w-80 h-80 bg-primary rounded-full filter blur-[120px] opacity-20 animate-pulse"></div>
+            <div className="absolute bottom-10 right-1/3 w-64 h-64 bg-primary rounded-full filter blur-[100px] opacity-15 animate-pulse"></div>
 
             <div className="py-20 relative z-10" data-aos="fade-up">
                 <div className="max-w-4xl mx-auto text-center">
-                    <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-semibold mb-6 text-[#F4F5F6] leading-tightf">
+                    <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-semibold mb-6 text-primary leading-tight">
                         Take Control of Your Data with Smart Governance
                     </h1>
 
@@ -26,27 +26,16 @@ export function LandingHeroSection() {
                         className="w-[40%] block mx-auto -mt-5"
                     />
 
-                    <p className="text-base sm:text-lg md:text-xl mb-8 text-purple-100 max-w-2xl mx-auto font-medium leading-relaxed">
-                        Ensure data quality, compliance, and trust with a
-                        platform designed for enterprises of all sizes. Our Data
-                        Governance platform helps enterprises ensure data
-                        quality, security, and compliance — all in one simple,
-                        modern workspace.
+                    <p className="text-base sm:text-lg md:text-xl mb-8 text-[#475467] max-w-2xl mx-auto font-normal leading-relaxed">
+                        Ensure data quality, compliance, and trust with a platform designed for enterprises of all sizes.
+                        Our StewardCore platform helps enterprises ensure data quality, security, and compliance — all in
+                        one simple, modern workspace.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12 md:mb-16 px-5">
-                        {/* <Link href={AUTH_ROUTES.SIGN_UP}>
-                            <Button
-                                size="lg"
-                                className="bg-white text-primary hover:bg-gray-100"
-                            >
-                                Get Started for Free
-                            </Button>
-                        </Link> */}
                         <Link href={LANDING_ROUTES.CONTACT}>
                             <Button
                                 size="lg"
-                                variant="outline"
-                                className="border-white text-white hover:bg-white hover:text-primary bg-transparent"
+                                className="bg-white text-primary hover:bg-gray-100 border border-[#D0D5DD]"
                             >
                                 Book Demo
                             </Button>

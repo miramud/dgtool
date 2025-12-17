@@ -57,7 +57,14 @@ const useApiManager = <TData = unknown, TError = Error, TVariables = unknown>({
   ): Promise<ApiResponse<TData>> => {
     try {
       let response: AxiosResponse<ApiResponse<TData>>;
-      const config = {};
+      const config: any = {};
+
+      // If details is FormData, set appropriate headers
+      if (details instanceof FormData) {
+        config.headers = {
+          "Content-Type": "multipart/form-data",
+        };
+      }
 
       switch (method.toUpperCase()) {
         case "GET":
@@ -103,6 +110,7 @@ const useApiManager = <TData = unknown, TError = Error, TVariables = unknown>({
     mutationFn: apiController,
     onSuccess: (response) => {
       if (showSuccessToast && response?.message) {
+        toast.success(response.message);
       }
 
       if (queryKey) {

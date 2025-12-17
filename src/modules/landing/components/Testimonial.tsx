@@ -18,7 +18,7 @@ export function LandingTestimonialsSection() {
   const [api, setApi] = useState<CarouselApi>();
   return (
     <section
-      className="py-12 sm:py-16 md:py-20 bg-[#E1DDEE]"
+      className="py-12 sm:py-16 md:py-20 bg-white"
       data-aos="fade-up"
     >
       <div className="w-full sm:w-[90%] lg:w-[80%] mx-auto px-4 sm:px-6">
