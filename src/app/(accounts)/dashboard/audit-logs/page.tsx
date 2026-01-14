@@ -25,29 +25,36 @@ export default function AuditLogPage() {
   ];
 
   const getFormattedValue = (log: AuditLog, columnKey: string) => {
+    const user = log.user || log.staff?.user;
+    const activityLabel =
+      log.activity && ACTIVITY_LABELS[log.activity as keyof typeof ACTIVITY_LABELS];
+
     switch (columnKey) {
       case "name":
         return (
           <span className="text-gray-900">
-            {`${log.user.first_name} ${log.user.last_name}`}
+            {user ? `${user.first_name} ${user.last_name}` : "User"}
           </span>
         );
       case "role":
         return (
           <span className="text-gray-900 capitalize">
-            {log.activity.replace(/_/g, " ").toLowerCase()}
+            {(log.action_display || log.action || "N/A").replace(/_/g, " ").toLowerCase()}
           </span>
         );
       case "date":
         return (
           <span className="text-gray-900">
-            {format(new Date(log.activity_datetime), "MMM dd, yyyy - hh:mmaaa")}
+            {format(
+              new Date(log.activity_datetime || log.created_datetime),
+              "MMM dd, yyyy - hh:mmaaa",
+            )}
           </span>
         );
       case "activity":
         return (
           <span className="text-gray-900">
-            {ACTIVITY_LABELS[log.activity] || log.metadata || "Activity performed"}
+            {activityLabel || log.activity || log.metadata || "Activity performed"}
           </span>
         );
       default:

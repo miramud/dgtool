@@ -27,16 +27,32 @@ export interface AuditLogUser {
   updated_datetime: string;
 }
 
+export interface AuditLogStaff {
+  id: string;
+  user?: AuditLogUser;
+  created_datetime?: string;
+  updated_datetime?: string;
+  deleted_datetime?: string | null;
+  is_deleted?: boolean;
+  is_active?: boolean;
+  created_by?: string | null;
+  updated_by?: string | null;
+}
+
 export interface AuditLog {
   id: string;
-  user: AuditLogUser;
+  user?: AuditLogUser;
+  staff?: AuditLogStaff;
+  role?: string | null;
+  action?: ActivityType;
+  action_display?: string;
   created_datetime: string;
   updated_datetime: string;
-  activity: ActivityType;
-  activity_datetime: string;
+  activity?: ActivityType | string;
+  activity_datetime?: string;
   ip_address: string;
   user_agent: string;
-  metadata: string;
+  metadata?: string;
 }
 
 export interface Paginator {
