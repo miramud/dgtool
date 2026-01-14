@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "Bash(npm audit:*)"
     ],
     "deny": [],
     "ask": []
