@@ -4,6 +4,7 @@ import useApiManager from "@/constants/controllers/mainController";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { axiosCallerWithToken } from "@/lib/helpers";
 import { AxiosError } from "axios";
+import { toast } from "sonner";
 import { DataCatalogue, DataCatalogueFormData } from "../types/dataCatalogue";
 import { IssueListResponse, IssueStatus } from "../types/issue";
 
@@ -20,44 +21,82 @@ export interface CreateDatasetFormData {
     business_domain: string;
     sensitivity: "INTERNAL" | "EXTERNAL" | "PRIVATE";
     tags: string;
-    raw_file: File;
-    dataset_type: string;
+    raw_file?: File;
+    dataset_type?: string;
     metadata_template?: string;
+    db_connection_info?: {
+        host: string;
+        port: number;
+        username: string;
+        password: string;
+        database_name: string;
+        table_name: string;
+        schema: string;
+        db_type: "postgresql" | "mysql";
+        ssl_mode: "disable" | "allow" | "prefer" | "require" | "verify-ca" | "verify-full";
+    };
 }
+
+const serializeTags = (tags: string): string => {
+    const parsedTags = tags
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter((tag) => tag.length > 0);
+    return JSON.stringify(parsedTags);
+};
+
+const getApiErrorMessage = (error: any): string => {
+    return (
+        error?.response?.data?.message ||
+        error?.message ||
+        "Something went wrong. Please try again."
+    );
+};
 
 export const useCreateDataCatalogue = () => {
     const { callApi, data, isLoading, isSuccess, isError, error } =
-        useApiManager<DataCatalogue, AxiosError, FormData>({
+        useApiManager<DataCatalogue, AxiosError, FormData | Record<string, any>>({
             endpoint: DATA_CATALOGUE_API_ROUTES.DATASETS,
             method: "POST",
             isAuth: true,
             showSuccessToast: true,
-            contentType: "multipart/form-data",
             queryKey: ["dataCatalogue"],
         });
 
     const createDataCatalogue = async (formData: CreateDatasetFormData) => {
-        const submitData = new FormData();
-        submitData.append('name', formData.name);
-        submitData.append('description', formData.description);
-        submitData.append('business_domain', formData.business_domain);
-        submitData.append('sensitivity', formData.sensitivity);
-        
-        // Convert comma-separated tags to JSON array
-        const tagsArray = formData.tags
-            .split(',')
-            .map(tag => tag.trim())
-            .filter(tag => tag.length > 0);
-        submitData.append('tags', JSON.stringify(tagsArray));
-        
-        submitData.append('raw_file', formData.raw_file);
-        submitData.append('dataset_type', formData.dataset_type);
-        
-        // Only append metadata_template if it exists
-        if (formData.metadata_template) {
-            submitData.append('metadata_template', formData.metadata_template);
+        if (formData.db_connection_info) {
+            const submitData: Record<string, any> = {
+                name: formData.name,
+                description: formData.description,
+                business_domain: formData.business_domain,
+                sensitivity: formData.sensitivity,
+                tags: serializeTags(formData.tags),
+                raw_file: null,
+                db_connection_info: formData.db_connection_info,
+            };
+
+            if (formData.metadata_template) {
+                submitData.metadata_template = formData.metadata_template;
+            }
+
+            return await callApi(submitData);
         }
-        
+
+        const submitData = new FormData();
+        submitData.append("name", formData.name);
+        submitData.append("description", formData.description);
+        submitData.append("business_domain", formData.business_domain);
+        submitData.append("sensitivity", formData.sensitivity);
+        submitData.append("tags", serializeTags(formData.tags));
+
+        if (formData.raw_file) {
+            submitData.append("raw_file", formData.raw_file);
+        }
+
+        if (formData.metadata_template) {
+            submitData.append("metadata_template", formData.metadata_template);
+        }
+
         return await callApi(submitData);
     };
 
@@ -65,6 +104,73 @@ export const useCreateDataCatalogue = () => {
         createDataCatalogue,
         data,
         isLoading,
+        isSuccess,
+        isError,
+        error,
+    };
+};
+
+export const useAppendDataset = () => {
+    const appendDataset = async (datasetId: string, formData: CreateDatasetFormData) => {
+        const endpoint = DATA_CATALOGUE_API_ROUTES.DATASET_APPEND_BY_ID.replace("{id}", datasetId);
+
+        if (formData.db_connection_info) {
+            const submitData: Record<string, any> = {
+                name: formData.name,
+                description: formData.description,
+                business_domain: formData.business_domain,
+                sensitivity: formData.sensitivity,
+                tags: serializeTags(formData.tags),
+                raw_file: null,
+                db_connection_info: formData.db_connection_info,
+            };
+
+            if (formData.metadata_template) {
+                submitData.metadata_template = formData.metadata_template;
+            }
+
+            const response = await axiosCallerWithToken.post(endpoint, submitData);
+            return response.data;
+        }
+
+        const submitData = new FormData();
+        submitData.append("name", formData.name);
+        submitData.append("description", formData.description);
+        submitData.append("business_domain", formData.business_domain);
+        submitData.append("sensitivity", formData.sensitivity);
+        submitData.append("tags", serializeTags(formData.tags));
+
+        if (formData.raw_file) {
+            submitData.append("raw_file", formData.raw_file);
+        }
+
+        if (formData.metadata_template) {
+            submitData.append("metadata_template", formData.metadata_template);
+        }
+
+        const response = await axiosCallerWithToken.post(endpoint, submitData, {
+            headers: {
+                "Content-Type": "multipart/form-data",
+            },
+        });
+
+        return response.data;
+    };
+
+    const { mutateAsync, isPending, isSuccess, isError, error } = useMutation({
+        mutationFn: ({ datasetId, formData }: { datasetId: string; formData: CreateDatasetFormData }) =>
+            appendDataset(datasetId, formData),
+        onSuccess: (response: any) => {
+            toast.success(response?.message || "Dataset append request submitted successfully.");
+        },
+        onError: (error: any) => {
+            toast.error(getApiErrorMessage(error));
+        },
+    });
+
+    return {
+        appendDataset: mutateAsync,
+        isLoading: isPending,
         isSuccess,
         isError,
         error,
@@ -143,6 +249,22 @@ export const useGetDataCatalogueById = (id: string) => {
         },
         enabled: !!id, // Only fetch when id is provided
         staleTime: 5 * 60 * 1000, // 5 minutes
+        retry: 1,
+    });
+};
+
+export const useGetDatasetProcessedData = (id: string) => {
+    return useQuery({
+        queryKey: ["datasetProcessedData", id],
+        queryFn: async () => {
+            const endpoint = DATA_CATALOGUE_API_ROUTES.DATASET_PROCESSED_DATA.replace("{id}", id);
+            const response = await axiosCallerWithToken.get(endpoint, {
+                responseType: "text",
+            });
+            return response.data;
+        },
+        enabled: !!id,
+        staleTime: 2 * 60 * 1000,
         retry: 1,
     });
 };

@@ -14,17 +14,33 @@ import { useGetMetadataTemplates, useGetDatasetTypes, useCreateDataCatalogue, Cr
 import { useState, useEffect, useRef } from "react";
 import { useCentrifugo } from "@/hooks/useCentrifugo";
 import { Progress } from "@/components/ui/progress";
+import type { ConnectedSourceSelection } from "./ConnectDataSourceModal";
 
 interface DataCatalogueModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   dataCatalogue?: DataCatalogue | null;
+  connectedSource?: ConnectedSourceSelection | null;
 }
+
+const normalizeTagsToCsv = (tags: unknown): string => {
+  if (Array.isArray(tags)) {
+    return tags
+      .map((tag) => String(tag).trim())
+      .filter((tag) => tag.length > 0)
+      .join(", ");
+  }
+  if (typeof tags === "string") {
+    return tags;
+  }
+  return "";
+};
 
 export default function DataCatalogueModal({
   open,
   onOpenChange,
   dataCatalogue,
+  connectedSource = null,
 }: DataCatalogueModalProps) {
   const isEdit = !!dataCatalogue;
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -49,15 +65,25 @@ export default function DataCatalogueModal({
     row: number;
     error_message: string;
   }>>([]);
+  const [connectedSourceInfo, setConnectedSourceInfo] =
+    useState<ConnectedSourceSelection | null>(connectedSource);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const processingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const getApiErrorMessage = (error: any): string => {
+    return (
+      error?.response?.data?.message ||
+      error?.message ||
+      "We couldn't complete your request. Please try again."
+    );
+  };
   
   const form = useForm<DataCatalogueFormData>({
     resolver: zodResolver(createDataCatalogueSchema),
     defaultValues: {
       name: dataCatalogue?.businessTechnicalSpecification || "",
       business_domain: dataCatalogue?.businessDescription || "",
-      tags: dataCatalogue?.tags?.join(", ") || "",
+      tags: normalizeTagsToCsv((dataCatalogue as any)?.tags),
       sensitivity: "INTERNAL",
       description: dataCatalogue?.usageGuidelines || "",
       raw_file: "",
@@ -119,17 +145,26 @@ export default function DataCatalogueModal({
         
         // Check if processing completed with errors or successfully
         const hasErrors = processedErrors.length > 0 || (data.error_summary && data.error_summary.length > 0);
-        
-        if (data.status === 'failed' || data.status === 'error') {
+
+        const normalizedStatus = String(data?.status || "").toLowerCase();
+        const isSuccessStatus = ["completed", "success", "succeeded", "processed", "done"].includes(normalizedStatus);
+        const isFailureStatus = ["failed", "error", "cancelled", "canceled"].includes(normalizedStatus);
+        const hasProcessingMetrics =
+          data?.total_rows !== undefined && data?.rows_cleaned !== undefined;
+
+        if (isFailureStatus) {
           setUploadStatus('error');
           setUploadMessage('Dataset processing failed. Please review errors and try again.');
-        } else {
+        } else if (isSuccessStatus && hasProcessingMetrics) {
           setUploadStatus('completed');
           if (hasErrors) {
             setUploadMessage(`Dataset processed with ${processedErrors.length > 0 ? processedErrors.length : data.error_summary?.length || 0} issues that need attention.`);
           } else {
             setUploadMessage('Dataset processed successfully without issues.');
           }
+        } else {
+          setUploadStatus('error');
+          setUploadMessage('Dataset processing did not complete successfully. Please try again.');
         }
         
         setUploadProgress(100);
@@ -147,7 +182,7 @@ export default function DataCatalogueModal({
       form.reset({
         name: dataCatalogue.businessTechnicalSpecification || "",
         business_domain: dataCatalogue.businessDescription || "",
-        tags: dataCatalogue.tags?.join(", ") || "",
+        tags: normalizeTagsToCsv((dataCatalogue as any)?.tags),
         sensitivity: "INTERNAL",
         description: dataCatalogue.usageGuidelines || "",
         raw_file: "",
@@ -166,6 +201,17 @@ export default function DataCatalogueModal({
       });
     }
   }, [dataCatalogue, form]);
+
+  useEffect(() => {
+    if (!open || isEdit) return;
+    setConnectedSourceInfo(connectedSource);
+    if (connectedSource && !selectedFile) {
+      form.setValue(
+        "raw_file",
+        `${connectedSource.sourceLabel}: ${connectedSource.assetName}`
+      );
+    }
+  }, [connectedSource, form, isEdit, open, selectedFile]);
 
   // File validation function
   const validateFile = (file: File): { valid: boolean; error?: string } => {
@@ -204,6 +250,7 @@ export default function DataCatalogueModal({
       }
 
       setFileError('');
+      setConnectedSourceInfo(null);
       setSelectedFile(file);
       // Set the file name in the form for display purposes
       form.setValue('raw_file', file.name);
@@ -249,6 +296,7 @@ export default function DataCatalogueModal({
       }
 
       setFileError('');
+      setConnectedSourceInfo(null);
       setSelectedFile(file);
       form.setValue('raw_file', file.name);
       // Auto-advance to next step after a short delay
@@ -260,12 +308,21 @@ export default function DataCatalogueModal({
 
   const handleFileRemove = () => {
     setSelectedFile(null);
+    setConnectedSourceInfo(null);
     setFileError('');
     form.setValue('raw_file', '');
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
+
+  const selectedDatasetLabel = selectedFile
+    ? selectedFile.name
+    : connectedSourceInfo
+    ? `${connectedSourceInfo.sourceLabel}: ${connectedSourceInfo.assetName}`
+    : "";
+
+  const hasSelectedDataset = !!selectedFile || !!connectedSourceInfo;
 
   const metadataStep = {
     id: "metadata",
@@ -278,6 +335,7 @@ export default function DataCatalogueModal({
               name="name"
               label="Dataset Name"
               placeholder="Enter dataset's name"
+              required
             />
             <FormSelect
               name="business_domain"
@@ -289,11 +347,13 @@ export default function DataCatalogueModal({
                 { value: "operations", label: "Operations" },
                 { value: "marketing", label: "Marketing" },
               ]}
+              required
             />
             <FormInput
               name="tags"
               label="Tags"
               placeholder="Enter tags (comma separated)"
+              required
             />
             <FormSelect
               name="sensitivity"
@@ -304,6 +364,7 @@ export default function DataCatalogueModal({
                 { value: "EXTERNAL", label: "External" },
                 { value: "PRIVATE", label: "PRIVATE" },
               ]}
+              required
             />
           </div>
           <div className="mt-4">
@@ -312,6 +373,7 @@ export default function DataCatalogueModal({
               label="Description"
               placeholder="Enter a description"
               rows={4}
+              required
             />
           </div>
         </div>
@@ -327,7 +389,7 @@ export default function DataCatalogueModal({
         <div>
           <h2 className="text-xl font-semibold mb-4">Upload File</h2>
 
-          {!selectedFile ? (
+          {!hasSelectedDataset ? (
             <>
               <div
                 className={`border-2 border-dashed rounded-lg p-12 text-center transition-colors ${
@@ -404,8 +466,10 @@ export default function DataCatalogueModal({
                   </svg>
                 </div>
                 <div className="flex-1">
-                  <p className="font-medium">{selectedFile.name}</p>
-                  <p className="text-sm text-gray-600">Selected successfully</p>
+                  <p className="font-medium">{selectedDatasetLabel}</p>
+                  <p className="text-sm text-gray-600">
+                    {selectedFile ? "Selected file" : "Connected data source"}
+                  </p>
                 </div>
                 <button 
                   onClick={handleFileRemove}
@@ -420,7 +484,7 @@ export default function DataCatalogueModal({
           )}
         </div>
       ),
-      isValid: !!selectedFile,
+      isValid: hasSelectedDataset,
     },
     {
       id: "dataset-type",
@@ -432,7 +496,7 @@ export default function DataCatalogueModal({
           
           <div className="mb-6">
             <h3 className="font-medium mb-2">Uploaded File</h3>
-            {selectedFile ? (
+            {hasSelectedDataset ? (
               <div className="border border-gray-300 rounded-lg p-4 bg-gray-50">
                 <div className="flex items-center">
                   <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center mr-3">
@@ -441,8 +505,10 @@ export default function DataCatalogueModal({
                     </svg>
                   </div>
                   <div className="flex-1">
-                    <p className="font-medium">{selectedFile.name}</p>
-                    <p className="text-sm text-gray-600">Selected</p>
+                    <p className="font-medium">{selectedDatasetLabel}</p>
+                    <p className="text-sm text-gray-600">
+                      {selectedFile ? "Selected file" : "Connected data source"}
+                    </p>
                   </div>
                   <button 
                     onClick={handleFileRemove}
@@ -456,7 +522,7 @@ export default function DataCatalogueModal({
               </div>
             ) : (
               <div className="border border-gray-300 rounded-lg p-4 bg-red-50">
-                <p className="text-red-600">No file selected. Please go back to select a file.</p>
+                <p className="text-red-600">No dataset selected. Please go back and select a file or connected source.</p>
               </div>
             )}
           </div>
@@ -500,7 +566,7 @@ export default function DataCatalogueModal({
           </Form>
         </div>
       ),
-      isValid: !!selectedFile && !!selectedDatasetType && (
+      isValid: hasSelectedDataset && !!selectedDatasetType && (
         !!form.watch('metadata_template') || 
         (Array.isArray(metadataTemplates) && metadataTemplates.length === 0)
       ),
@@ -527,9 +593,9 @@ export default function DataCatalogueModal({
   const handleComplete = async () => {
     try {
       const formValues = form.getValues();
-      
-      if (!selectedFile) {
-        console.error("No file selected");
+
+      if (!selectedFile && !connectedSourceInfo) {
+        console.error("No dataset selected");
         return;
       }
 
@@ -547,9 +613,11 @@ export default function DataCatalogueModal({
         business_domain: formValues.business_domain,
         sensitivity: formValues.sensitivity,
         tags: formValues.tags,
-        raw_file: selectedFile,
-        dataset_type: formValues.dataset_type,
         metadata_template: formValues.metadata_template,
+        ...(selectedFile ? { raw_file: selectedFile } : {}),
+        ...(connectedSourceInfo
+          ? { db_connection_info: connectedSourceInfo.db_connection_info }
+          : {}),
       };
 
       const response = await createDataCatalogue(submitData);
@@ -564,24 +632,26 @@ export default function DataCatalogueModal({
         
         // Set a timeout for processing completion (5 minutes)
         processingTimeoutRef.current = setTimeout(() => {
-          console.warn('Processing timeout reached, marking as completed with potential issues');
-          setUploadStatus('completed');
+          console.warn('Processing timeout reached, marking upload as failed');
+          setUploadStatus('error');
           setUploadProgress(100);
-          setUploadMessage(processedErrors.length > 0 
-            ? `Processing completed with ${processedErrors.length} known issues. Some operations may have timed out.`
-            : 'Processing completed. Some operations may have timed out.'
-          );
+          setUploadMessage('Dataset processing timed out before completion. Please try again.');
         }, 5 * 60 * 1000); // 5 minutes timeout
         
       } else {
         console.warn('No dataset reference found in response:', response);
+        setUploadStatus('error');
+        setUploadProgress(100);
+        setUploadMessage('Upload started but tracking reference was not returned. Please retry.');
       }
 
       setShowSuccessModal(true);
     } catch (error) {
       console.error("Error creating dataset:", error);
       setUploadStatus('error');
-      setUploadMessage('Upload failed. Please try again.');
+      setUploadProgress(100);
+      setUploadMessage(getApiErrorMessage(error));
+      setShowSuccessModal(true);
     }
   };
 
@@ -598,6 +668,7 @@ export default function DataCatalogueModal({
     // Reset file state
     setSelectedFile(null);
     setCurrentStep(0);
+    setConnectedSourceInfo(null);
     // Reset upload state
     setUploadProgress(0);
     setUploadStatus('idle');
@@ -633,6 +704,7 @@ export default function DataCatalogueModal({
     // Reset file state
     setSelectedFile(null);
     setCurrentStep(0);
+    setConnectedSourceInfo(null);
     // Reset upload state
     setUploadProgress(0);
     setUploadStatus('idle');

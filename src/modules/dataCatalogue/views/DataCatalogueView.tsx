@@ -12,6 +12,7 @@ import { useGetDataCatalogueById } from "../controllers/dataCatalogueController"
 import OverviewTab from "../components/OverviewTab";
 import MetadataTab from "../components/MetadataTab";
 import DataQualityTab from "../components/DataQualityTab";
+import DatasetTableTab from "../components/DatasetTableTab";
 import LineageTab from "../components/LineageTab";
 import AccessPermissionsTab from "../components/AccessPermissionsTab";
 import VersionHistoryTab from "../components/VersionHistoryTab";
@@ -23,7 +24,6 @@ interface DataCatalogueViewProps {
   className?: string;
   datasetId: string;
 }
-
 
 export default function DataCatalogueView({
   className,
@@ -144,6 +144,7 @@ export default function DataCatalogueView({
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="metadata">Metadata</TabsTrigger>
           <TabsTrigger value="data-quality">Data Quality & Profiling</TabsTrigger>
+          <TabsTrigger value="dataset-table">Dataset Table</TabsTrigger>
           <TabsTrigger value="lineage">Lineage</TabsTrigger>
           <TabsTrigger value="access-permissions">Access & Permissions</TabsTrigger>
           <TabsTrigger value="version-history">Version History</TabsTrigger>
@@ -160,6 +161,10 @@ export default function DataCatalogueView({
 
         <TabsContent value="data-quality">
           <DataQualityTab dataset={dataset} />
+        </TabsContent>
+
+        <TabsContent value="dataset-table">
+          <DatasetTableTab datasetId={datasetId} dataset={dataset} />
         </TabsContent>
 
         <TabsContent value="lineage">
@@ -186,6 +191,7 @@ export default function DataCatalogueView({
         datasetId={datasetId}
         datasetName={dataset.name}
       />
+
     </div>
   );
 }

@@ -35,6 +35,21 @@ interface EnhancedDataCatalogueProps {
   className?: string;
 }
 
+const normalizeTags = (tags: unknown): string[] => {
+  if (Array.isArray(tags)) {
+    return tags
+      .map((tag) => String(tag).trim())
+      .filter((tag) => tag.length > 0);
+  }
+  if (typeof tags === "string") {
+    return tags
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter((tag) => tag.length > 0);
+  }
+  return [];
+};
+
 export default function DataStewardshipAndOwnership({
   className,
 }: EnhancedDataCatalogueProps) {
@@ -98,8 +113,10 @@ export default function DataStewardshipAndOwnership({
     // Apply search filter
     if (debouncedSearchValue) {
       dataCatalogue = dataCatalogue.filter(
-        (item) =>
-          item.name
+        (item) => {
+          const itemTags = normalizeTags((item as any).tags);
+          return (
+            item.name
             ?.toLowerCase()
             .includes(debouncedSearchValue.toLowerCase()) ||
           item.description
@@ -108,9 +125,11 @@ export default function DataStewardshipAndOwnership({
           item.dataset_type
             ?.toLowerCase()
             .includes(debouncedSearchValue.toLowerCase()) ||
-          item.tags?.some((tag: string) =>
+          itemTags.some((tag: string) =>
             tag.toLowerCase().includes(debouncedSearchValue.toLowerCase())
           )
+          );
+        }
       );
     }
 
@@ -215,9 +234,10 @@ export default function DataStewardshipAndOwnership({
         return <span className='text-gray-500'>{item?.data_owners_count}</span>;
 
       case "tags":
+        const itemTags = normalizeTags((item as any).tags);
         return (
           <div className='flex flex-wrap gap-1'>
-            {item.tags.slice(0, 2).map((tag, index) => (
+            {itemTags.slice(0, 2).map((tag, index) => (
               <StatusBadge
                 key={index}
                 status={tag}
@@ -225,9 +245,9 @@ export default function DataStewardshipAndOwnership({
                 className='bg-blue-100 text-blue-800'
               />
             ))}
-            {item.tags.length > 2 && (
+            {itemTags.length > 2 && (
               <StatusBadge
-                status={`+${item.tags.length - 2} more`}
+                status={`+${itemTags.length - 2} more`}
                 variant='default'
                 className='bg-gray-100 text-gray-600'
               />

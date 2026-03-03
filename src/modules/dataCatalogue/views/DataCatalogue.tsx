@@ -15,9 +15,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import AdvancedTable from "../../../components/shared/AdvancedTable";
@@ -33,6 +30,9 @@ import { cn, formatDate } from "@/lib/utils";
 import DataCatalogueModal from "../components/DataCatalogueModal";
 import DeleteDataCatalogueModal from "../components/DeleteDataCatalogueModal";
 import RequestAccessModal from "../components/RequestAccessModal";
+import ConnectDataSourceModal, {
+  ConnectedSourceSelection,
+} from "../components/ConnectDataSourceModal";
 
 // Custom hook for debounced search (mimicking the performance dialog pattern)
 function useDebounce(value: string, delay: number) {
@@ -55,6 +55,21 @@ interface EnhancedDataCatalogueProps {
   className?: string;
 }
 
+const normalizeTags = (tags: unknown): string[] => {
+  if (Array.isArray(tags)) {
+    return tags
+      .map((tag) => String(tag).trim())
+      .filter((tag) => tag.length > 0);
+  }
+  if (typeof tags === "string") {
+    return tags
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter((tag) => tag.length > 0);
+  }
+  return [];
+};
+
 export default function DataCatalogue({
   className,
 }: EnhancedDataCatalogueProps) {
@@ -71,6 +86,9 @@ export default function DataCatalogue({
   const [modalOpen, setModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [requestAccessModalOpen, setRequestAccessModalOpen] = useState(false);
+  const [connectModalOpen, setConnectModalOpen] = useState(false);
+  const [connectedSource, setConnectedSource] =
+    useState<ConnectedSourceSelection | null>(null);
 
   // Get data from API using React Query
   const { data: apiData, isLoading, refetch } = useGetDataCatalogue();
@@ -100,8 +118,10 @@ export default function DataCatalogue({
     // Apply search filter
     if (debouncedSearchValue) {
       dataCatalogue = dataCatalogue.filter(
-        (item) =>
-          item.businessTechnicalSpecification
+        (item) => {
+          const itemTags = normalizeTags((item as any).tags);
+          return (
+            item.businessTechnicalSpecification
             ?.toLowerCase()
             .includes(debouncedSearchValue.toLowerCase()) ||
           item.businessDescription
@@ -110,9 +130,11 @@ export default function DataCatalogue({
           item.usageGuidelines
             ?.toLowerCase()
             .includes(debouncedSearchValue.toLowerCase()) ||
-          item.tags?.some((tag: string) =>
+          itemTags.some((tag: string) =>
             tag.toLowerCase().includes(debouncedSearchValue.toLowerCase())
           )
+          );
+        }
       );
     }
 
@@ -157,9 +179,10 @@ export default function DataCatalogue({
       case "usageGuidelines":
         return <span className='text-gray-900'>{item.dataset_type}</span>;
       case "tags":
+        const itemTags = normalizeTags((item as any).tags);
         return (
           <div className='flex flex-wrap gap-1'>
-            {item.tags?.slice(0, 2).map((tag, index) => (
+            {itemTags.slice(0, 2).map((tag, index) => (
               <StatusBadge
                 key={index}
                 status={tag}
@@ -167,9 +190,9 @@ export default function DataCatalogue({
                 className='bg-blue-100 text-blue-800'
               />
             ))}
-            {item.tags?.length > 2 && (
+            {itemTags.length > 2 && (
               <StatusBadge
-                status={`+${item.tags.length - 2} more`}
+                status={`+${itemTags.length - 2} more`}
                 variant='default'
                 className='bg-gray-100 text-gray-600'
               />
@@ -280,38 +303,17 @@ export default function DataCatalogue({
             <DropdownMenuItem
               onClick={() => {
                 setSelectedDataCatalogue(null);
+                setConnectedSource(null);
                 setModalOpen(true);
               }}
             >
               <Upload className='w-4 h-4 mr-2' />
               Upload File
             </DropdownMenuItem>
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger>
-                <Database className='w-4 h-4 mr-2' />
-                Connect to Data Source
-              </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent>
-                <DropdownMenuItem
-                  onClick={() => console.log("PostgreSQL selected")}
-                >
-                  PostgreSQL
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => console.log("REST API selected")}
-                >
-                  REST API
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => console.log("Amazon S3 selected")}
-                >
-                  Amazon S3
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => console.log("MySQL selected")}>
-                  MySQL
-                </DropdownMenuItem>
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
+            <DropdownMenuItem onClick={() => setConnectModalOpen(true)}>
+              <Database className='w-4 h-4 mr-2' />
+              Connect to Data Source
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -416,8 +418,24 @@ export default function DataCatalogue({
       {/* Modals */}
       <DataCatalogueModal
         open={modalOpen}
-        onOpenChange={setModalOpen}
+        onOpenChange={(nextOpen) => {
+          setModalOpen(nextOpen);
+          if (!nextOpen) {
+            setConnectedSource(null);
+          }
+        }}
         dataCatalogue={selectedDataCatalogue}
+        connectedSource={connectedSource}
+      />
+
+      <ConnectDataSourceModal
+        open={connectModalOpen}
+        onOpenChange={setConnectModalOpen}
+        onConnected={(selection) => {
+          setSelectedDataCatalogue(null);
+          setConnectedSource(selection);
+          setModalOpen(true);
+        }}
       />
 
       <DeleteDataCatalogueModal
