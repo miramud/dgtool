@@ -7,34 +7,25 @@ import { z } from "zod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CheckCircle, Paperclip } from "lucide-react";
+import { CheckCircle } from "lucide-react";
 import FormInput from "@/components/shared/FormInput";
 import FormSelect from "@/components/shared/FormSelect";
 import FormTextarea from "@/components/shared/FormTextarea";
-import { 
-  ISSUE_TYPE_OPTIONS, 
+import {
+  ISSUE_TYPE_OPTIONS,
   SEVERITY_LEVEL_OPTIONS,
-  IssueType, 
+  IssueType,
   SeverityLevel,
-  IssueStatus,
-  ReportIssueFormData 
+  ReportIssueFormData
 } from "../types/issue";
 import { useCreateIssue } from "@/modules/dataCatalogue/controllers/issueController";
 import { useUserProfile } from "@/modules/userManagement/controllers/userController";
-
-const STATUS_OPTIONS = [
-  { value: IssueStatus.OPEN, label: "Open" },
-  { value: IssueStatus.IN_PROGRESS, label: "In Progress" },
-  { value: IssueStatus.RESOLVED, label: "Resolved" },
-  { value: IssueStatus.CLOSED, label: "Closed" },
-];
 
 const reportIssueSchema = z.object({
   title: z.string().min(1, "Issue title is required"),
   type: z.nativeEnum(IssueType, { message: "Please select an issue type" }),
   severity: z.nativeEnum(SeverityLevel, { message: "Please select a severity level" }),
   nextReviewDate: z.string().optional(),
-  status: z.nativeEnum(IssueStatus, { message: "Please select a status" }),
   dueDate: z.string().optional(),
   description: z.string().min(10, "Description must be at least 10 characters"),
 });
@@ -56,7 +47,6 @@ export default function ReportIssueModal({
   const { data: profile } = useUserProfile();
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submittedIssueId, setSubmittedIssueId] = useState<string>("");
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const { mutate: createIssue, isPending } = useCreateIssue();
 
@@ -76,7 +66,6 @@ export default function ReportIssueModal({
       type: undefined,
       severity: undefined,
       nextReviewDate: "",
-      status: undefined,
       dueDate: "",
       description: "",
     },
@@ -92,7 +81,7 @@ export default function ReportIssueModal({
         next_review_date: data.nextReviewDate || undefined,
         due_date: data.dueDate || undefined,
         description: data.description,
-        attachments: selectedFile?.name,
+        attachments: undefined,
       },
       {
         onSuccess: (response) => {
@@ -103,20 +92,12 @@ export default function ReportIssueModal({
     );
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-    }
-  };
-
   const handleClose = () => {
     onOpenChange(false);
     // Reset state after modal closes
     setTimeout(() => {
       setIsSubmitted(false);
       setSubmittedIssueId("");
-      setSelectedFile(null);
       form.reset();
     }, 200);
   };
@@ -219,17 +200,6 @@ export default function ReportIssueModal({
                   required
                 />
 
-                {/* Status */}
-                <FormSelect
-                  name="status"
-                  label="Status"
-                  placeholder="Select Status"
-                  options={STATUS_OPTIONS}
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Next Review Date */}
                 <FormInput
                   name="nextReviewDate"
@@ -237,6 +207,9 @@ export default function ReportIssueModal({
                   type="date"
                   placeholder="Enter your review date"
                 />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
                 {/* Due Date */}
                 <FormInput
@@ -255,43 +228,6 @@ export default function ReportIssueModal({
                 required
                 rows={4}
               />
-
-              {/* Upload File */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Upload File
-                </label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                  <div className="space-y-2">
-                    <p className="text-sm text-gray-500">
-                      Choose a File or drag and drop it here (2MB)
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      PDF, DOCX, XLSX
-                    </p>
-                    <div className="pt-2">
-                      <label htmlFor="file-upload" className="cursor-pointer">
-                        <div className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-                          <Paperclip className="w-4 h-4" />
-                          Select File
-                        </div>
-                        <input
-                          id="file-upload"
-                          type="file"
-                          className="hidden"
-                          accept=".pdf,.docx,.xlsx"
-                          onChange={handleFileChange}
-                        />
-                      </label>
-                    </div>
-                    {selectedFile && (
-                      <p className="text-sm text-gray-600 pt-2">
-                        Selected: {selectedFile.name}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
 
               {/* Buttons */}
               <div className="flex justify-between gap-4 pt-4">

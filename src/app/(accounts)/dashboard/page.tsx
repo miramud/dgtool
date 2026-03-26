@@ -8,7 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function DashboardPage() {
-    // In a real app, get user role from auth context/session
-    // For demo, default to admin view
-    return <DashboardView userRole="admin" userName="Ahmed" />;
+    return <DashboardView />;
 }

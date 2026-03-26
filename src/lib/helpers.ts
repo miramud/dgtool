@@ -1,6 +1,10 @@
 import axios from "axios";
 import { getSession } from "next-auth/react";
-import { handleSessionExpiry, isSessionExpired } from "./auth-utils";
+import {
+  getAuthorizationHeader,
+  handleSessionExpiry,
+  isSessionExpired,
+} from "./auth-utils";
 
 const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -45,7 +49,12 @@ axiosCallerWithToken.interceptors.request.use(
       return Promise.reject(new Error("No valid token available"));
     }
 
-    config.headers.Authorization = `Bearer ${token}`;
+    const authorizationHeader = getAuthorizationHeader(token);
+
+    if (authorizationHeader) {
+      config.headers.Authorization = authorizationHeader;
+    }
+
     retryCount = 0;
     return config;
   },

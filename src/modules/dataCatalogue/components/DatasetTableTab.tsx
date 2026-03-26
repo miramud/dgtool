@@ -37,6 +37,8 @@ import ConnectDataSourceModal, {
 } from "./ConnectDataSourceModal";
 import {
   CreateDatasetFormData,
+  EditDatasetRowPayload,
+  useEditDatasetRow,
   useGetDatasetProcessedData,
   useAppendDataset,
 } from "../controllers/dataCatalogueController";
@@ -47,34 +49,17 @@ type IssueType =
   | "duplicate"
   | "rule_violation";
 
-type EditableDatasetColumn =
-  | "id"
-  | "name"
-  | "description"
-  | "fieldName"
-  | "fieldAttribute"
-  | "fieldType"
-  | "date";
+type CellIssue = {
+  type: IssueType;
+  message: string;
+};
 
 type DatasetRow = {
   id: string;
-  name: string;
-  description: string;
-  fieldName: string;
-  fieldAttribute: string;
-  fieldType: string;
-  date: string;
-  csvValues?: string[];
+  backendRowIndex: number;
   issueType?: "error" | "duplicate";
-  cellIssues?: Partial<
-    Record<
-      EditableDatasetColumn,
-      {
-        type: IssueType;
-        message: string;
-      }
-    >
-  >;
+  values: Record<string, string>;
+  cellIssues?: Record<string, CellIssue>;
 };
 
 interface DatasetTableTabProps {
@@ -82,47 +67,109 @@ interface DatasetTableTabProps {
   dataset: DataCatalogue;
 }
 
+type BackendIssue = {
+  column?: string;
+  type?: string;
+  severity?: string;
+  message?: string;
+  action_taken?: string;
+  original_value?: string;
+  cleaned_value?: string | null;
+};
+
+type BackendProcessedRow = {
+  row_number?: number;
+  data?: Record<string, unknown>;
+  is_rejected?: boolean;
+  issues?: BackendIssue[];
+  duplicates?: unknown[];
+};
+
+const DEFAULT_HEADERS = ["row_number"];
+
+const normalizeKey = (value: string) =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_");
+
+const prettifyHeader = (value: string) =>
+  value
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+
+const normalizeIssueType = (rawType?: string): IssueType => {
+  const value = String(rawType || "").toLowerCase();
+  if (value.includes("duplicate")) return "duplicate";
+  if (value.includes("missing") || value.includes("null") || value.includes("empty")) {
+    return "missing_value";
+  }
+  if (value.includes("invalid") || value.includes("format") || value.includes("email")) {
+    return "invalid_format";
+  }
+  return "rule_violation";
+};
+
+const looksLikeJsonText = (value: string) => {
+  const trimmed = value.trim();
+  return (
+    trimmed.startsWith("{") ||
+    trimmed.startsWith("[") ||
+    trimmed.includes("\"row_number\"") ||
+    trimmed.includes("row_number")
+  );
+};
+
+const issueIcon = (issueType?: IssueType) => {
+  if (issueType === "missing_value") {
+    return <CircleAlert className="w-4 h-4 text-amber-600 flex-shrink-0" />;
+  }
+  if (issueType === "invalid_format") {
+    return <AlertTriangle className="w-4 h-4 text-orange-600 flex-shrink-0" />;
+  }
+  if (issueType === "duplicate") {
+    return <Copy className="w-4 h-4 text-indigo-600 flex-shrink-0" />;
+  }
+  if (issueType === "rule_violation") {
+    return <ShieldAlert className="w-4 h-4 text-red-600 flex-shrink-0" />;
+  }
+  return null;
+};
+
 export default function DatasetTableTab({ datasetId, dataset }: DatasetTableTabProps) {
-  const DEFAULT_TABLE_HEADERS = [
-    "Name",
-    "Description",
-    "Field Name",
-    "Field Attribute",
-    "Field Type",
-    "Date",
-  ];
   const [datasetSearchValue, setDatasetSearchValue] = useState("");
   const [datasetFilterValue, setDatasetFilterValue] = useState("all");
   const [showOnlyIssueRows, setShowOnlyIssueRows] = useState(false);
   const [showOnlyIssueCells, setShowOnlyIssueCells] = useState(false);
+
   const [isEditingDataset, setIsEditingDataset] = useState(false);
-  const [appendModalOpen, setAppendModalOpen] = useState(false);
-  const [appendConnectModalOpen, setAppendConnectModalOpen] = useState(false);
-  const [appendFile, setAppendFile] = useState<File | null>(null);
-  const [appendFileError, setAppendFileError] = useState("");
-  const appendFileInputRef = useRef<HTMLInputElement>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(50);
   const [isPreparingEditor, setIsPreparingEditor] = useState(false);
   const [isSavingDataset, setIsSavingDataset] = useState(false);
   const [isExportingDataset, setIsExportingDataset] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "success" | "error">("idle");
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
-  const [tableHeaders, setTableHeaders] = useState<string[]>(DEFAULT_TABLE_HEADERS);
+
+  const [appendModalOpen, setAppendModalOpen] = useState(false);
+  const [appendConnectModalOpen, setAppendConnectModalOpen] = useState(false);
+  const [appendFile, setAppendFile] = useState<File | null>(null);
+  const [appendFileError, setAppendFileError] = useState("");
+  const appendFileInputRef = useRef<HTMLInputElement>(null);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(50);
+
+  const [tableHeaders, setTableHeaders] = useState<string[]>(DEFAULT_HEADERS);
+  const [tableRows, setTableRows] = useState<DatasetRow[]>([]);
+  const [editedRows, setEditedRows] = useState<Record<string, DatasetRow>>({});
+
   const { appendDataset, isLoading: isAppending } = useAppendDataset();
+  const { editDatasetRow } = useEditDatasetRow();
   const {
     data: processedData,
     isLoading: isLoadingProcessedData,
     isError: isProcessedDataError,
     refetch: refetchProcessedData,
   } = useGetDatasetProcessedData(datasetId);
-
-  const [tableRows, setTableRows] = useState<DatasetRow[]>([]);
-
-  const [editedRows, setEditedRows] = useState<Record<string, DatasetRow>>({});
-
-  const toText = (value: unknown, fallback = "") =>
-    value === null || value === undefined ? fallback : String(value);
 
   const parseCsvLine = (line: string): string[] => {
     const cells: string[] = [];
@@ -157,115 +204,188 @@ export default function DatasetTableTab({ datasetId, dataset }: DatasetTableTabP
     return cells;
   };
 
-  const parseCsvText = (csvText: string): { headers: string[]; rows: Array<Record<string, string>> } => {
+  const mapCsvPayload = (csvText: string): { headers: string[]; rows: DatasetRow[] } => {
     const lines = csvText
       .split(/\r?\n/)
       .map((line) => line.trim())
       .filter((line) => line.length > 0);
 
-    if (lines.length < 2) return { headers: [], rows: [] };
+    if (lines.length < 2) return { headers: DEFAULT_HEADERS, rows: [] };
 
-    const headers = parseCsvLine(lines[0]).map((header) => header.trim());
+    const csvHeaders = parseCsvLine(lines[0]);
+    const headers = ["row_number", ...csvHeaders];
 
-    const rows = lines.slice(1).map((line) => {
+    const rows = lines.slice(1).map((line, rowIndex) => {
       const values = parseCsvLine(line);
-      return headers.reduce<Record<string, string>>((acc, header, index) => {
-        acc[header] = values[index] ?? "";
-        return acc;
-      }, {});
-    });
+      const mappedValues: Record<string, string> = {
+        row_number: String(rowIndex + 1),
+      };
 
-    return { headers, rows };
-  };
-
-  const mapCsvRowsToTableRows = (csvText: string): { headers: string[]; rows: DatasetRow[] } => {
-    const { headers, rows: csvRows } = parseCsvText(csvText);
-
-    const rows = csvRows.map((row, index) => {
-      const values = headers.map((header) => row[header] ?? "");
-      const firstName = row.first_name || row.firstname || row.firstName || "";
-      const lastName = row.last_name || row.lastname || row.lastName || "";
-      const fullName = `${firstName} ${lastName}`.trim();
+      csvHeaders.forEach((header, index) => {
+        mappedValues[header] = values[index] ?? "";
+      });
 
       return {
-        id: toText(row.id || row.row_number || index + 1, `row-${index + 1}`),
-        name: toText(row.name || row.full_name || fullName || row.email, "--"),
-        description: toText(row.description || row.email, "--"),
-        fieldName: toText(row.field_name || row.first_name || "--"),
-        fieldAttribute: toText(row.field_attribute || row.last_name || row.mobile_number || "--"),
-        fieldType: toText(row.field_type || row.type || "--"),
-        date: toText(row.date || row.created_datetime || row.updated_datetime || "--"),
-        csvValues: values,
+        id: `row-${rowIndex + 1}`,
+        backendRowIndex: rowIndex,
+        values: mappedValues,
       };
     });
 
     return { headers, rows };
   };
 
+  const parsePossibleJsonRows = (text: string): BackendProcessedRow[] | null => {
+    const trimmed = text.trim();
+    if (!trimmed) return null;
 
-  const mapProcessedRows = (payload: any): { headers: string[]; rows: DatasetRow[] } => {
-    if (typeof payload === "string") {
-      return mapCsvRowsToTableRows(payload);
+    const tryParse = (candidate: string): any | null => {
+      try {
+        return JSON.parse(candidate);
+      } catch {
+        return null;
+      }
+    };
+
+    // 1) Valid JSON array/object
+    const direct = tryParse(trimmed);
+    if (direct) {
+      if (Array.isArray(direct)) return direct as BackendProcessedRow[];
+      if (typeof direct === "object") return [direct as BackendProcessedRow];
     }
 
-    const rawRows =
+    // 2) NDJSON (one JSON object per line)
+    const lines = trimmed
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+    if (lines.length > 1 && lines.every((line) => line.startsWith("{") && line.endsWith("}"))) {
+      const parsedLines = lines
+        .map((line) => tryParse(line))
+        .filter(Boolean) as BackendProcessedRow[];
+      if (parsedLines.length > 0) return parsedLines;
+    }
+
+    // 3) Concatenated objects: }{ or }\n{
+    const splitBlocks = trimmed
+      .split(/\}\s*\{/g)
+      .map((block, index, arr) => {
+        if (arr.length === 1) return block;
+        if (index === 0) return `${block}}`;
+        if (index === arr.length - 1) return `{${block}`;
+        return `{${block}}`;
+      })
+      .map((block) => block.trim())
+      .filter((block) => block.startsWith("{") && block.endsWith("}"));
+
+    if (splitBlocks.length > 0) {
+      const parsedBlocks = splitBlocks
+        .map((block) => tryParse(block))
+        .filter(Boolean) as BackendProcessedRow[];
+      if (parsedBlocks.length > 0) return parsedBlocks;
+    }
+
+    return null;
+  };
+
+  const mapJsonPayload = (payload: unknown): { headers: string[]; rows: DatasetRow[] } => {
+    const rawRows: BackendProcessedRow[] =
       (Array.isArray(payload) && payload) ||
-      (Array.isArray(payload?.results) && payload.results) ||
-      (Array.isArray(payload?.data?.results) && payload.data.results) ||
-      (Array.isArray(payload?.rows) && payload.rows) ||
-      (Array.isArray(payload?.data?.rows) && payload.data.rows) ||
+      ((payload as any)?.row_number !== undefined &&
+      typeof (payload as any)?.data === "object"
+        ? [payload as BackendProcessedRow]
+        : []) ||
+      (Array.isArray((payload as any)?.results) && (payload as any).results) ||
+      (Array.isArray((payload as any)?.data) && (payload as any).data) ||
+      (Array.isArray((payload as any)?.data?.results) && (payload as any).data.results) ||
       [];
 
-    const rows = rawRows.map((row: any, index: number) => {
-      const issueType: DatasetRow["issueType"] =
-        row?.issueType === "duplicate" || row?.issue_type === "duplicate"
-          ? "duplicate"
-          : row?.issueType === "error" || row?.issue_type === "error"
-          ? "error"
-          : undefined;
+    if (rawRows.length === 0) {
+      return { headers: DEFAULT_HEADERS, rows: [] };
+    }
+
+    const dataHeadersSet = new Set<string>();
+    rawRows.forEach((row) => {
+      Object.keys(row.data || {}).forEach((key) => dataHeadersSet.add(key));
+    });
+
+    const dataHeaders = Array.from(dataHeadersSet);
+    const headers = ["row_number", ...dataHeaders];
+
+    const rows: DatasetRow[] = rawRows.map((row, index) => {
+      const values: Record<string, string> = {
+        row_number: String(row.row_number ?? index + 1),
+      };
+
+      dataHeaders.forEach((header) => {
+        const value = row.data?.[header];
+        values[header] = value === null || value === undefined ? "" : String(value);
+      });
+
+      const issueMap: Record<string, CellIssue> = {};
+      const seenIssueKeys = new Set<string>();
+
+      (row.issues || []).forEach((issue) => {
+        const column = issue.column || "row_number";
+        const dedupeKey = `${column}::${issue.type || ""}::${issue.message || ""}`;
+        if (seenIssueKeys.has(dedupeKey)) return;
+        seenIssueKeys.add(dedupeKey);
+
+        issueMap[column] = {
+          type: normalizeIssueType(issue.type),
+          message: issue.message || "Data quality issue detected.",
+        };
+      });
+
+      let issueType: DatasetRow["issueType"];
+      const issueValues = Object.values(issueMap);
+      if ((row.duplicates || []).length > 0 || issueValues.some((issue) => issue.type === "duplicate")) {
+        issueType = "duplicate";
+      } else if ((row.issues || []).length > 0 || row.is_rejected) {
+        issueType = "error";
+      }
 
       return {
-        id: toText(row?.id ?? row?._id ?? row?.row_number ?? index + 1, `row-${index + 1}`),
-        name: toText(row?.name ?? row?.Name ?? row?.full_name ?? row?.employee_name, "--"),
-        description: toText(row?.description ?? row?.Description ?? row?.details, "--"),
-        fieldName: toText(row?.fieldName ?? row?.field_name ?? row?.business_domain, "--"),
-        fieldAttribute: toText(
-          row?.fieldAttribute ?? row?.field_attribute ?? row?.column_name,
-          "--"
-        ),
-        fieldType: toText(row?.fieldType ?? row?.field_type ?? row?.type ?? row?.data_type, "--"),
-        date: toText(row?.date ?? row?.created_datetime ?? row?.updated_datetime, "--"),
+        id: String(row.row_number ?? `row-${index + 1}`),
+        backendRowIndex: index,
+        values,
         issueType,
+        cellIssues: issueMap,
       };
     });
 
-    return {
-      headers: DEFAULT_TABLE_HEADERS,
-      rows,
-    };
+    return { headers, rows };
+  };
+
+  const mapProcessedRows = (payload: unknown): { headers: string[]; rows: DatasetRow[] } => {
+    if (typeof payload === "string") {
+      if (looksLikeJsonText(payload)) {
+        const parsedRows = parsePossibleJsonRows(payload);
+        if (parsedRows && parsedRows.length > 0) {
+          return mapJsonPayload(parsedRows);
+        }
+      }
+      return mapCsvPayload(payload);
+    }
+    return mapJsonPayload(payload);
   };
 
   const filteredRows = useMemo(() => {
-    const normalizedQuery = datasetSearchValue.trim().toLowerCase();
+    const query = datasetSearchValue.trim().toLowerCase();
 
     const matchesSearch = (row: DatasetRow) => {
-      if (!normalizedQuery) return true;
-      return (
-        row.name.toLowerCase().includes(normalizedQuery) ||
-        row.description.toLowerCase().includes(normalizedQuery) ||
-        row.fieldName.toLowerCase().includes(normalizedQuery) ||
-        row.fieldAttribute.toLowerCase().includes(normalizedQuery) ||
-        row.fieldType.toLowerCase().includes(normalizedQuery) ||
-        row.date.toLowerCase().includes(normalizedQuery)
+      if (!query) return true;
+      return Object.values(row.values).some((value) =>
+        String(value).toLowerCase().includes(query)
       );
     };
 
     const matchesFilter = (row: DatasetRow) => {
       if (datasetFilterValue === "all") return true;
-      const issueTypes = Object.values(row.cellIssues || {}).map((issue) => issue.type);
       if (datasetFilterValue === "error" || datasetFilterValue === "duplicate") {
         return row.issueType === datasetFilterValue;
       }
+      const issueTypes = Object.values(row.cellIssues || {}).map((issue) => issue.type);
       return issueTypes.includes(datasetFilterValue as IssueType);
     };
 
@@ -291,7 +411,10 @@ export default function DatasetTableTab({ datasetId, dataset }: DatasetTableTabP
 
     const mappedRows: Record<string, DatasetRow> = {};
     tableRows.forEach((row) => {
-      mappedRows[row.id] = { ...row };
+      mappedRows[row.id] = {
+        ...row,
+        values: { ...row.values },
+      };
     });
 
     setTimeout(() => {
@@ -301,27 +424,12 @@ export default function DatasetTableTab({ datasetId, dataset }: DatasetTableTabP
     }, 350);
   };
 
-  const handleCancelAppend = () => {
-    setAppendModalOpen(false);
-    setAppendFile(null);
-    setAppendFileError("");
-  };
-
-  const handleSaveDataset = () => {
-    setTableRows(Object.values(editedRows));
-    setIsEditingDataset(false);
-  };
-
   const validateEditedDataset = () => {
     const rows = Object.values(editedRows);
-    const invalidRows = rows.filter(
-      (row) =>
-        !row.name?.trim() ||
-        !row.description?.trim() ||
-        !row.fieldName?.trim() ||
-        !row.fieldAttribute?.trim() ||
-        !row.fieldType?.trim()
-    );
+    const invalidRows = rows.filter((row) => {
+      const issueColumns = Object.keys(row.cellIssues || {});
+      return issueColumns.some((column) => !String(row.values[column] || "").trim());
+    });
 
     return {
       totalRows: rows.length,
@@ -330,28 +438,70 @@ export default function DatasetTableTab({ datasetId, dataset }: DatasetTableTabP
     };
   };
 
-  const handleSaveDatasetWithLoading = () => {
+  const handleSaveDatasetWithLoading = async () => {
     if (!isEditingDataset || isSavingDataset) return;
     setIsSavingDataset(true);
     setSaveStatus("saving");
 
-    setTimeout(() => {
-      const validation = validateEditedDataset();
-      if (!validation.isValid) {
-        toast.error(
-          `Cannot save. ${validation.invalidRows} row(s) have missing required fields.`
+    const validation = validateEditedDataset();
+    if (!validation.isValid) {
+      toast.error(
+        `Cannot save. ${validation.invalidRows} row(s) still have unresolved issue values.`
+      );
+      setSaveStatus("error");
+      setIsSavingDataset(false);
+      return;
+    }
+
+    try {
+      const changedRows = tableRows.filter((originalRow) => {
+        const editedRow = editedRows[originalRow.id];
+        if (!editedRow) return false;
+        return tableHeaders.some(
+          (header) => (editedRow.values[header] ?? "") !== (originalRow.values[header] ?? "")
         );
-        setSaveStatus("error");
-        setIsSavingDataset(false);
-        return;
+      });
+
+      for (const row of changedRows) {
+        const editedRow = editedRows[row.id];
+        if (!editedRow) continue;
+
+        const rowIndex =
+          typeof editedRow.backendRowIndex === "number"
+            ? editedRow.backendRowIndex
+            : typeof row.backendRowIndex === "number"
+            ? row.backendRowIndex
+            : Math.max(0, tableRows.findIndex((item) => item.id === row.id));
+
+        const dataPayload = tableHeaders.reduce<Record<string, string>>((acc, header) => {
+          if (header === "row_number") return acc;
+          acc[header] = String(editedRow.values[header] ?? "");
+          return acc;
+        }, {});
+
+        const payload: EditDatasetRowPayload = {
+          row_index: rowIndex,
+          data: dataPayload,
+        };
+
+        await editDatasetRow({ datasetId, payload });
       }
 
-      handleSaveDataset();
-      toast.success("Dataset table changes saved.");
+      setTableRows(Object.values(editedRows));
+      setIsEditingDataset(false);
+      await refetchProcessedData();
+      toast.success(
+        changedRows.length > 0
+          ? `${changedRows.length} row(s) updated successfully.`
+          : "No row changes detected."
+      );
       setSaveStatus("success");
       setLastSavedAt(new Date());
+    } catch {
+      setSaveStatus("error");
+    } finally {
       setIsSavingDataset(false);
-    }, 600);
+    }
   };
 
   const handleExportDataset = () => {
@@ -359,28 +509,19 @@ export default function DatasetTableTab({ datasetId, dataset }: DatasetTableTabP
     setIsExportingDataset(true);
 
     setTimeout(() => {
-      const headers = [
-        ...tableHeaders,
-      ];
-
       const escapeCsv = (value: string) => `"${value.replace(/"/g, '""')}"`;
       const csvRows = [
-        headers.join(","),
+        tableHeaders.join(","),
         ...tableRows.map((row) =>
-          (row.csvValues || [
-            row.name,
-            row.description,
-            row.fieldName,
-            row.fieldAttribute,
-            row.fieldType,
-            row.date,
-          ])
-            .map((cell) => escapeCsv(String(cell ?? "")))
+          tableHeaders
+            .map((header) => escapeCsv(String(row.values[header] ?? "")))
             .join(",")
         ),
       ];
 
-      const blob = new Blob([csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
+      const blob = new Blob([csvRows.join("\n")], {
+        type: "text/csv;charset=utf-8;",
+      });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -395,18 +536,23 @@ export default function DatasetTableTab({ datasetId, dataset }: DatasetTableTabP
     }, 500);
   };
 
-  const handleCellChange = (
-    rowId: string,
-    key: keyof DatasetRow,
-    value: string
-  ) => {
+  const handleCellChange = (rowId: string, column: string, value: string) => {
     setEditedRows((prev) => ({
       ...prev,
       [rowId]: {
         ...prev[rowId],
-        [key]: value,
+        values: {
+          ...prev[rowId].values,
+          [column]: value,
+        },
       },
     }));
+  };
+
+  const handleCancelAppend = () => {
+    setAppendModalOpen(false);
+    setAppendFile(null);
+    setAppendFileError("");
   };
 
   const handleAppendFileSelect = () => {
@@ -488,25 +634,9 @@ export default function DatasetTableTab({ datasetId, dataset }: DatasetTableTabP
   useEffect(() => {
     if (isEditingDataset) return;
     const mapped = mapProcessedRows(processedData);
-    setTableHeaders(mapped.headers.length > 0 ? mapped.headers : DEFAULT_TABLE_HEADERS);
+    setTableHeaders(mapped.headers.length > 0 ? mapped.headers : DEFAULT_HEADERS);
     setTableRows(mapped.rows);
   }, [isEditingDataset, processedData]);
-
-  const renderIssueIcon = (issueType?: IssueType) => {
-    if (issueType === "missing_value") {
-      return <CircleAlert className="w-4 h-4 text-amber-600 flex-shrink-0" />;
-    }
-    if (issueType === "invalid_format") {
-      return <AlertTriangle className="w-4 h-4 text-orange-600 flex-shrink-0" />;
-    }
-    if (issueType === "duplicate") {
-      return <Copy className="w-4 h-4 text-indigo-600 flex-shrink-0" />;
-    }
-    if (issueType === "rule_violation") {
-      return <ShieldAlert className="w-4 h-4 text-red-600 flex-shrink-0" />;
-    }
-    return null;
-  };
 
   return (
     <div className="space-y-4">
@@ -516,7 +646,7 @@ export default function DatasetTableTab({ datasetId, dataset }: DatasetTableTabP
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
               type="text"
-              placeholder="Search by business terms, Name or ID"
+              placeholder="Search rows"
               value={datasetSearchValue}
               onChange={(event) => {
                 setDatasetSearchValue(event.target.value);
@@ -525,7 +655,7 @@ export default function DatasetTableTab({ datasetId, dataset }: DatasetTableTabP
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A4A7A] focus:border-transparent text-sm"
             />
           </div>
-          <div className="relative w-full md:w-44">
+          <div className="relative w-full md:w-48">
             <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
             <select
               value={datasetFilterValue}
@@ -574,6 +704,7 @@ export default function DatasetTableTab({ datasetId, dataset }: DatasetTableTabP
             Only Issue Cells
           </Button>
         </div>
+
         <div className="flex items-center gap-3">
           {isEditingDataset && (
             <Button
@@ -592,6 +723,7 @@ export default function DatasetTableTab({ datasetId, dataset }: DatasetTableTabP
               )}
             </Button>
           )}
+
           <Button
             variant="outline"
             className="border-[#C9C6D7] text-[#4A4A7A] hover:bg-[#F3F1FA]"
@@ -607,6 +739,7 @@ export default function DatasetTableTab({ datasetId, dataset }: DatasetTableTabP
               "Export"
             )}
           </Button>
+
           <Button
             variant="outline"
             className={cn(
@@ -628,6 +761,7 @@ export default function DatasetTableTab({ datasetId, dataset }: DatasetTableTabP
               </>
             )}
           </Button>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button className="bg-[#4A4A7A] hover:bg-[#3A3A6A]" disabled={isAppending}>
@@ -701,26 +835,26 @@ export default function DatasetTableTab({ datasetId, dataset }: DatasetTableTabP
             Unable to load processed dataset rows. Please refresh and try again.
           </div>
         )}
+
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-200 border-b border-gray-300">
               <tr>
-                {[
-                  ...tableHeaders,
-                ].map((header, index) => (
+                {tableHeaders.map((header, index) => (
                   <th
                     key={`${header}-${index}`}
                     className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
                   >
-                    {header}
+                    {prettifyHeader(header)}
                   </th>
                 ))}
               </tr>
             </thead>
+
             <tbody className="bg-white divide-y divide-gray-200">
               {isLoadingProcessedData ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-10 text-center text-gray-500">
+                  <td colSpan={Math.max(1, tableHeaders.length)} className="px-6 py-10 text-center text-gray-500">
                     <span className="inline-flex items-center gap-2">
                       <Loader2 className="w-4 h-4 animate-spin" />
                       Loading dataset rows...
@@ -728,70 +862,55 @@ export default function DatasetTableTab({ datasetId, dataset }: DatasetTableTabP
                   </td>
                 </tr>
               ) : pagedRows.length > 0 ? (
-                pagedRows.map((row) => {
-                  const rowData = isEditingDataset ? editedRows[row.id] || row : row;
-                  const cellIssues = row.cellIssues || {};
-                  const getIssueForCell = (key: EditableDatasetColumn) => cellIssues[key];
-                  const isErrorCell = (key: EditableDatasetColumn) => {
-                    const issue = getIssueForCell(key);
-                    return !!issue && issue.type !== "duplicate";
-                  };
-                  const isDuplicateCell = (key: EditableDatasetColumn) =>
-                    getIssueForCell(key)?.type === "duplicate";
-                  const isEditableCell = (key: EditableDatasetColumn) =>
-                    isEditingDataset && !!getIssueForCell(key);
+                pagedRows.map((row) => (
+                  <tr key={row.id}>
+                    {tableHeaders.map((header, colIndex) => {
+                      const issue = row.cellIssues?.[header] || row.cellIssues?.[normalizeKey(header)];
+                      const isIssueCell = !!issue;
+                      const isDuplicateCell = issue?.type === "duplicate";
+                      const cellValue =
+                        isEditingDataset && editedRows[row.id]
+                          ? editedRows[row.id].values[header] ?? ""
+                          : row.values[header] ?? "";
 
-                  return (
-                    <tr key={row.id}>
-                      {tableHeaders.map((header, index) => {
-                        const fixedKeys = [
-                          "name",
-                          "description",
-                          "fieldName",
-                          "fieldAttribute",
-                          "fieldType",
-                          "date",
-                        ] as EditableDatasetColumn[];
-                        const key = fixedKeys[index];
-                        const issue = getIssueForCell(key);
-                        const cellClasses = cn(
-                          "px-6 py-4 text-sm text-gray-900 align-middle",
-                          isErrorCell(key) && "bg-[#FCE8E8]",
-                          isDuplicateCell(key) && "bg-[#ECE8F5]"
-                        );
-
-                        return (
-                          <td key={`${row.id}-${key}`} className={cellClasses}>
-                            {isEditableCell(key) ? (
-                              <input
-                                type="text"
-                                value={rowData[key] ?? ""}
-                                onChange={(event) =>
-                                  handleCellChange(row.id, key, event.target.value)
-                                }
-                                className="w-full rounded-md border border-green-500 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-green-400"
-                              />
-                            ) : (
-                              <div className="flex items-center gap-2">
-                                {renderIssueIcon(issue?.type)}
-                                {showOnlyIssueCells && !issue ? (
-                                  <span className="text-gray-300">--</span>
-                                ) : (
-                                  <span
-                                    className="block truncate max-w-[320px]"
-                                    title={issue?.message || ""}
-                                  >
-                                    {row.csvValues?.[index] ?? rowData[key] ?? "--"}
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
-                })
+                      return (
+                        <td
+                          key={`${row.id}-${header}-${colIndex}`}
+                          className={cn(
+                            "px-6 py-4 text-sm text-gray-900 align-middle",
+                            isIssueCell && !isDuplicateCell && "bg-[#FCE8E8]",
+                            isDuplicateCell && "bg-[#ECE8F5]"
+                          )}
+                        >
+                          {isEditingDataset && isIssueCell ? (
+                            <input
+                              type="text"
+                              value={cellValue}
+                              onChange={(event) =>
+                                handleCellChange(row.id, header, event.target.value)
+                              }
+                              className="w-full rounded-md border border-green-500 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-green-400"
+                            />
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              {issueIcon(issue?.type)}
+                              {showOnlyIssueCells && !issue ? (
+                                <span className="text-gray-300">--</span>
+                              ) : (
+                                <span
+                                  className="block truncate max-w-[320px]"
+                                  title={issue?.message || ""}
+                                >
+                                  {cellValue || "--"}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))
               ) : (
                 <tr>
                   <td colSpan={Math.max(1, tableHeaders.length)} className="px-6 py-10 text-center text-gray-500">
@@ -802,6 +921,7 @@ export default function DatasetTableTab({ datasetId, dataset }: DatasetTableTabP
             </tbody>
           </table>
         </div>
+
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-6 py-4 border-t border-gray-200">
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <button

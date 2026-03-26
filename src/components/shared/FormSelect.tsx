@@ -35,6 +35,7 @@ export default function FormSelect({
   placeholder = "Select an option",
   isLoading = false,
   emptyMessage = "No options available",
+  disabled,
 }: IProps) {
   const form = useFormContext();
 
@@ -58,7 +59,7 @@ export default function FormSelect({
           )}
 
           <FormControl>
-            <Select onValueChange={field.onChange} defaultValue={field.value}>
+            <Select onValueChange={field.onChange} defaultValue={field.value} disabled={disabled}>
               <SelectTrigger>
                 <SelectValue placeholder={placeholder} />
                 {isLoading && (

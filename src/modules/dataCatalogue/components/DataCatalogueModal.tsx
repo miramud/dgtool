@@ -1,4 +1,5 @@
 "use client";
+import { DATA_CATALOGUE_API_ROUTES } from "@/constants/dataCatalogue-api-routes";
 import MultiStepDialog from "@/components/shared/MultiStepDialog";
 import FormInput from "@/components/shared/FormInput";
 import FormSelect from "@/components/shared/FormSelect";
@@ -7,6 +8,7 @@ import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
+import { axiosCallerWithToken } from "@/lib/helpers";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { DataCatalogue, DataCatalogueFormData, createDataCatalogueSchema } from "../types/dataCatalogue";
@@ -15,6 +17,8 @@ import { useState, useEffect, useRef } from "react";
 import { useCentrifugo } from "@/hooks/useCentrifugo";
 import { Progress } from "@/components/ui/progress";
 import type { ConnectedSourceSelection } from "./ConnectDataSourceModal";
+
+const DATA_CATALOGUE_MODAL_LOG_PREFIX = "[DataCatalogueModal]";
 
 interface DataCatalogueModalProps {
   open: boolean;
@@ -69,6 +73,7 @@ export default function DataCatalogueModal({
     useState<ConnectedSourceSelection | null>(connectedSource);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const processingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const cleanupPollingRef = useRef<NodeJS.Timeout | null>(null);
 
   const getApiErrorMessage = (error: any): string => {
     return (
@@ -76,6 +81,98 @@ export default function DataCatalogueModal({
       error?.message ||
       "We couldn't complete your request. Please try again."
     );
+  };
+
+  const stopCleanupPolling = () => {
+    if (cleanupPollingRef.current) {
+      clearInterval(cleanupPollingRef.current);
+      cleanupPollingRef.current = null;
+    }
+  };
+
+  const applyCleanupSessionState = (session: any) => {
+    const normalizedStatus = String(session?.status || "").toLowerCase();
+    const totalRows =
+      session?.total_rows_processed ??
+      session?.cleanup_summary?.total_rows ??
+      session?.cleanup_summary?.total_rows_processed;
+    const rowsCleaned = session?.total_rows_cleaned;
+    const rowsRejected = session?.total_rows_rejected ?? 0;
+
+    setProcessingResults({
+      totalRows,
+      rowsCleaned,
+      errorSummary: session?.cleanup_summary?.error_summary,
+    });
+
+    if (["completed", "success", "succeeded", "done"].includes(normalizedStatus)) {
+      setUploadStatus("completed");
+      setUploadProgress(100);
+      setUploadMessage("Dataset processed successfully.");
+      stopCleanupPolling();
+      if (processingTimeoutRef.current) {
+        clearTimeout(processingTimeoutRef.current);
+        processingTimeoutRef.current = null;
+      }
+      return;
+    }
+
+    if (["failed", "error", "cancelled", "canceled"].includes(normalizedStatus)) {
+      setUploadStatus("error");
+      setUploadProgress(100);
+      setUploadMessage(session?.error_message || "Dataset processing failed.");
+      stopCleanupPolling();
+      if (processingTimeoutRef.current) {
+        clearTimeout(processingTimeoutRef.current);
+        processingTimeoutRef.current = null;
+      }
+      return;
+    }
+
+    setUploadStatus("processing");
+    setUploadProgress(70);
+    setUploadMessage(
+      totalRows
+        ? `Processing dataset. ${rowsCleaned ?? 0} cleaned, ${rowsRejected} rejected, ${totalRows} total rows.`
+        : "Processing dataset..."
+    );
+  };
+
+  const startCleanupPolling = (datasetId: string) => {
+    stopCleanupPolling();
+
+    const poll = async () => {
+      try {
+        const endpoint = DATA_CATALOGUE_API_ROUTES.DATASET_CLEANUP_SESSION.replace("{id}", datasetId);
+        const response = await axiosCallerWithToken.get(endpoint);
+        const session = response.data?.data;
+
+        console.info(`${DATA_CATALOGUE_MODAL_LOG_PREFIX} Cleanup session poll`, {
+          datasetId,
+          session,
+        });
+
+        if (!session) {
+          return;
+        }
+
+        applyCleanupSessionState(session);
+      } catch (error: any) {
+        const status = error?.response?.status;
+
+        if (status !== 404) {
+          console.error(`${DATA_CATALOGUE_MODAL_LOG_PREFIX} Cleanup session poll failed`, {
+            datasetId,
+            error,
+          });
+        }
+      }
+    };
+
+    void poll();
+    cleanupPollingRef.current = setInterval(() => {
+      void poll();
+    }, 2000);
   };
   
   const form = useForm<DataCatalogueFormData>({
@@ -106,6 +203,7 @@ export default function DataCatalogueModal({
   const { connect, disconnect, subscribeToChannel } = useCentrifugo({
     url: process.env.NEXT_PUBLIC_CENTRIFUGO_WS_URL || 'wss://centrifugo-v5-zkss.onrender.com/connection/websocket',
     onProgress: (progress) => {
+      console.info(`${DATA_CATALOGUE_MODAL_LOG_PREFIX} Progress update`, progress);
       setUploadProgress(progress.percentage);
       setUploadStatus(progress.status);
       setUploadMessage(progress.message || '');
@@ -127,7 +225,7 @@ export default function DataCatalogueModal({
     },
     onDatasetProcessed: async (data: any) => {
       // Handle dataset processing completion
-      console.log('Processing completed with data:', data);
+      console.info(`${DATA_CATALOGUE_MODAL_LOG_PREFIX} Processing completed`, data);
       
       // Clear the timeout since we received completion
       if (processingTimeoutRef.current) {
@@ -175,6 +273,19 @@ export default function DataCatalogueModal({
       }
     }
   });
+
+  useEffect(() => {
+    if (uploadStatus === 'idle' && uploadProgress === 0 && !uploadMessage) {
+      return;
+    }
+
+    console.info(`${DATA_CATALOGUE_MODAL_LOG_PREFIX} Upload state changed`, {
+      uploadStatus,
+      uploadProgress,
+      uploadMessage,
+      processedErrors: processedErrors.length,
+    });
+  }, [processedErrors.length, uploadMessage, uploadProgress, uploadStatus]);
 
   // Reset form when dataCatalogue changes
   useEffect(() => {
@@ -593,9 +704,16 @@ export default function DataCatalogueModal({
   const handleComplete = async () => {
     try {
       const formValues = form.getValues();
+      console.info(`${DATA_CATALOGUE_MODAL_LOG_PREFIX} Starting dataset submit`, {
+        hasSelectedFile: !!selectedFile,
+        selectedFileName: selectedFile?.name,
+        connectedSourceAsset: connectedSourceInfo?.assetName,
+        datasetType: formValues.dataset_type,
+        metadataTemplate: formValues.metadata_template,
+      });
 
       if (!selectedFile && !connectedSourceInfo) {
-        console.error("No dataset selected");
+        console.error(`${DATA_CATALOGUE_MODAL_LOG_PREFIX} No dataset selected`);
         return;
       }
 
@@ -605,6 +723,7 @@ export default function DataCatalogueModal({
       setProcessedErrors([]); // Clear any previous errors
       
       // Connect to Centrifugo
+      console.info(`${DATA_CATALOGUE_MODAL_LOG_PREFIX} Connecting to Centrifugo`);
       connect();
 
       const submitData: CreateDatasetFormData = {
@@ -621,6 +740,11 @@ export default function DataCatalogueModal({
       };
 
       const response = await createDataCatalogue(submitData);
+      console.info(`${DATA_CATALOGUE_MODAL_LOG_PREFIX} Create dataset response`, response);
+      const datasetId =
+        (response as any)?.data?.data?.id ||
+        (response as any)?.data?.id ||
+        (response as any)?.id;
       
       // Get the reference ID from the response to subscribe to the channel
       // The response structure might be in different places depending on API
@@ -628,18 +752,31 @@ export default function DataCatalogueModal({
                         (response as any)?.data?.reference ||
                         (response as any)?.reference;
       if (datasetRef) {
-        subscribeToChannel(`dataset:${datasetRef}`);
+        const channel = `dataset:${datasetRef}`;
+        console.info(`${DATA_CATALOGUE_MODAL_LOG_PREFIX} Subscribing to dataset channel`, {
+          channel,
+        });
+        subscribeToChannel(channel);
+      }
+
+      if (datasetId) {
+        console.info(`${DATA_CATALOGUE_MODAL_LOG_PREFIX} Starting cleanup session polling`, {
+          datasetId,
+        });
+        startCleanupPolling(datasetId);
         
         // Set a timeout for processing completion (5 minutes)
         processingTimeoutRef.current = setTimeout(() => {
           console.warn('Processing timeout reached, marking upload as failed');
+          stopCleanupPolling();
           setUploadStatus('error');
           setUploadProgress(100);
           setUploadMessage('Dataset processing timed out before completion. Please try again.');
         }, 5 * 60 * 1000); // 5 minutes timeout
-        
-      } else {
-        console.warn('No dataset reference found in response:', response);
+      }
+
+      if (!datasetRef && !datasetId) {
+        console.warn(`${DATA_CATALOGUE_MODAL_LOG_PREFIX} No dataset reference found in response`, response);
         setUploadStatus('error');
         setUploadProgress(100);
         setUploadMessage('Upload started but tracking reference was not returned. Please retry.');
@@ -647,7 +784,7 @@ export default function DataCatalogueModal({
 
       setShowSuccessModal(true);
     } catch (error) {
-      console.error("Error creating dataset:", error);
+      console.error(`${DATA_CATALOGUE_MODAL_LOG_PREFIX} Error creating dataset`, error);
       setUploadStatus('error');
       setUploadProgress(100);
       setUploadMessage(getApiErrorMessage(error));
@@ -688,6 +825,7 @@ export default function DataCatalogueModal({
     });
     // Disconnect from WebSocket
     disconnect();
+    stopCleanupPolling();
     // Clear processing timeout
     if (processingTimeoutRef.current) {
       clearTimeout(processingTimeoutRef.current);
@@ -724,6 +862,7 @@ export default function DataCatalogueModal({
     });
     // Disconnect from WebSocket
     disconnect();
+    stopCleanupPolling();
     // Clear processing timeout
     if (processingTimeoutRef.current) {
       clearTimeout(processingTimeoutRef.current);

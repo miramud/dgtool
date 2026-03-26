@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import FormInput from "@/components/shared/FormInput";
 import FormSelect from "@/components/shared/FormSelect";
+import { useUserProfile } from "@/modules/userManagement/controllers/userController";
 import type { DataCatalogue } from "../types/dataCatalogue";
 
 interface RequestAccessModalProps {
@@ -23,7 +24,6 @@ interface RequestAccessFormData {
   duration: string;
   status: string;
   statusRight: string;
-  requestedOn: string;
   acknowledgment: boolean;
 }
 
@@ -34,19 +34,39 @@ export default function RequestAccessModal({
   onSubmit
 }: RequestAccessModalProps) {
   const [acknowledged, setAcknowledged] = useState(false);
+  const { data: profile } = useUserProfile();
 
   const form = useForm<RequestAccessFormData>({
     defaultValues: {
       requesterName: "",
-      datasetName: selectedDataset?.businessTechnicalSpecification || "",
+      datasetName: "",
       intendedUse: "",
       duration: "",
-      status: "",
-      statusRight: "",
-      requestedOn: "",
+      status: "pending",
+      statusRight: "pending",
       acknowledgment: false
     }
   });
+
+  // Prefill form values when modal opens with selected dataset
+  useEffect(() => {
+    if (open && selectedDataset) {
+      const requesterFullName = profile
+        ? `${profile.first_name} ${profile.last_name}`
+        : "";
+
+      form.reset({
+        requesterName: requesterFullName,
+        datasetName: selectedDataset.name || "",
+        intendedUse: "",
+        duration: "",
+        status: "pending",
+        statusRight: "pending",
+        acknowledgment: false
+      });
+      setAcknowledged(false);
+    }
+  }, [open, selectedDataset, profile, form]);
 
   const intendedUseOptions = [
     { value: "analytics", label: "Analytics" },
@@ -67,13 +87,6 @@ export default function RequestAccessModal({
     { value: "pending", label: "Pending" },
     { value: "approved", label: "Approved" },
     { value: "rejected", label: "Rejected" }
-  ];
-
-  const requestedOnOptions = [
-    { value: "today", label: "Today" },
-    { value: "yesterday", label: "Yesterday" },
-    { value: "last_week", label: "Last Week" },
-    { value: "custom", label: "Custom Date" }
   ];
 
   const handleSubmit = (data: RequestAccessFormData) => {
@@ -109,13 +122,14 @@ export default function RequestAccessModal({
                 label="Requester Name"
                 placeholder="Ibrahim Musa"
                 required
+                disabled
               />
               <FormInput
                 name="datasetName"
                 label="Dataset Name"
                 placeholder="HR Employee Data"
-                defaultValue={selectedDataset?.businessTechnicalSpecification || ""}
                 required
+                disabled
               />
             </div>
 
@@ -145,6 +159,7 @@ export default function RequestAccessModal({
                 placeholder="Select Status"
                 options={statusOptions}
                 required
+                disabled
               />
               <FormSelect
                 name="statusRight"
@@ -152,19 +167,8 @@ export default function RequestAccessModal({
                 placeholder="Select Status"
                 options={statusOptions}
                 required
+                disabled
               />
-            </div>
-
-            {/* Row 4: Requested On */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormSelect
-                name="requestedOn"
-                label="Requested On"
-                placeholder="Select Date"
-                options={requestedOnOptions}
-                required
-              />
-              <div></div> {/* Empty div for grid alignment */}
             </div>
 
             {/* Acknowledgment Checkbox */}
@@ -174,11 +178,11 @@ export default function RequestAccessModal({
                 checked={acknowledged}
                 onCheckedChange={(checked) => setAcknowledged(checked as boolean)}
               />
-              <label 
-                htmlFor="acknowledgment" 
+              <label
+                htmlFor="acknowledgment"
                 className="text-sm text-gray-700 leading-relaxed cursor-pointer"
               >
-                I acknowledge that this dataset is classified as Confidential and agree to comply with company data usage policies.
+                I acknowledge that this dataset is classified as {selectedDataset?.sensitivity || "Confidential"} and agree to comply with company data usage policies.
               </label>
             </div>
 

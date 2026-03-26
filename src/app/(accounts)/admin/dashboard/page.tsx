@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function AdminDashboardPage() {
-    return <DashboardView userRole="admin" userName="Ahmed" />;
+    return <DashboardView />;
 }

@@ -1,6 +1,12 @@
 import { signOut } from "next-auth/react";
 import { toast } from "sonner";
 
+export const getAuthorizationHeader = (token?: string | null): string | null => {
+  if (!token) return null;
+
+  return `Bearer ${token}`;
+};
+
 /**
  * Handles session expiry by clearing all authentication data and redirecting to login
  */
@@ -40,20 +46,7 @@ export const handleSessionExpiry = async (showToast: boolean = true) => {
  * Checks if the current session/token is expired
  */
 export const isSessionExpired = (token?: string): boolean => {
-  if (!token) return true;
-
-  try {
-    // If JWT token, decode and check expiry
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    const currentTime = Math.floor(Date.now() / 1000);
-
-    return payload.exp < currentTime;
-  } catch (error) {
-    // If not a JWT or parsing fails, consider it expired
-    console.log("error", error);
-
-    return true;
-  }
+  return !token;
 };
 
 /**

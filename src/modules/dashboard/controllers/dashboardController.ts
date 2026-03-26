@@ -1,23 +1,23 @@
 import { useQuery } from "@tanstack/react-query";
-import { dashboardService } from "@/services/dashboard";
+import { dashboardService, DashboardDateFilter } from "@/services/dashboard";
 
 const QUERY_KEYS = {
   stats: "dashboard-stats",
   businessDomainChart: "dashboard-business-domain-chart",
 };
 
-export const useDashboardStats = () => {
+export const useDashboardStats = (filters?: DashboardDateFilter) => {
   return useQuery({
-    queryKey: [QUERY_KEYS.stats],
-    queryFn: () => dashboardService.getStats(),
+    queryKey: [QUERY_KEYS.stats, filters],
+    queryFn: () => dashboardService.getStats(filters),
     select: (data) => data.data,
   });
 };
 
-export const useBusinessDomainChart = () => {
+export const useBusinessDomainChart = (filters?: DashboardDateFilter) => {
   return useQuery({
-    queryKey: [QUERY_KEYS.businessDomainChart],
-    queryFn: () => dashboardService.getBusinessDomainChart(),
+    queryKey: [QUERY_KEYS.businessDomainChart, filters],
+    queryFn: () => dashboardService.getBusinessDomainChart(filters),
     select: (data) => data.data,
   });
 };

@@ -1,38 +1,72 @@
 "use client";
 
-import { Calendar } from "lucide-react";
+import { useState } from "react";
+import { Calendar as CalendarIcon, X } from "lucide-react";
+import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { UserRole, MetricCard as MetricCardType } from "../types/dashboard";
 import MetricCard from "../components/MetricCard";
 import DataQualityChart from "../components/DataQualityChart";
 import RecentIncidentsTable from "../components/RecentIncidentsTable";
 import { useDashboardStats, useBusinessDomainChart } from "../controllers/dashboardController";
 import { useIssues } from "@/modules/dataCatalogue/controllers/issueController";
+import { useUserProfile } from "@/modules/userManagement/controllers/userController";
+import type { DashboardDateFilter } from "@/services/dashboard";
+import type { DateRange } from "react-day-picker";
 
 interface DashboardViewProps {
-  userRole?: UserRole;
-  userName?: string;
   className?: string;
 }
 
 export default function DashboardView({
-  userRole = "admin",
-  userName = "Ahmed",
   className,
 }: DashboardViewProps) {
-  // Fetch dashboard data
-  const { data: statsData, isLoading: loadingStats } = useDashboardStats();
-  const { data: chartData, isLoading: loadingChart } = useBusinessDomainChart();
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const [clickCount, setClickCount] = useState(0);
+
+  // Build filter when user has completed both clicks (start + end)
+  const dateFilter: DashboardDateFilter | undefined =
+    dateRange?.from && dateRange?.to && clickCount >= 2
+      ? {
+          start_date: format(dateRange.from, "yyyy-MM-dd"),
+          end_date: format(dateRange.to, "yyyy-MM-dd"),
+        }
+      : undefined;
+
+  // Fetch user profile
+  const { data: profile, isLoading: loadingProfile } = useUserProfile();
+
+  // Fetch dashboard data (filtered by date range)
+  const { data: statsData, isLoading: loadingStats } = useDashboardStats(dateFilter);
+  const { data: chartData, isLoading: loadingChart } = useBusinessDomainChart(dateFilter);
   const { data: issuesData, isLoading: loadingIssues } = useIssues({});
 
-  const isLoading = loadingStats || loadingChart || loadingIssues;
+  const handleClearFilter = () => {
+    setDateRange(undefined);
+    setClickCount(0);
+  };
+
+  // Extract user data
+  const userName = profile?.first_name || "User";
+  const userRole = (profile?.roles?.[0]?.name?.toLowerCase() || "admin") as UserRole;
+
+  // Only show full loading skeleton on initial load (no data yet), not on refetches
+  const isInitialLoading =
+    (loadingStats && !statsData) ||
+    (loadingChart && !chartData) ||
+    (loadingIssues && !issuesData) ||
+    (loadingProfile && !profile);
 
   // Create metrics from API data
   const adminMetrics: MetricCardType[] = statsData ? [
     {
       id: "average-cleanup-score",
       title: "Data Quality Score",
-      value: `${statsData.average_cleanup_score}%`,
+      value: `${statsData.average_cleanup_score ?? 0}%`,
     },
     {
       id: "total-datasets",
@@ -89,7 +123,7 @@ export default function DashboardView({
   }) || [];
 
   // Loading state
-  if (isLoading) {
+  if (isInitialLoading) {
     return (
       <div className={cn("space-y-6", className)}>
         <div className="animate-pulse space-y-6">
@@ -118,11 +152,67 @@ export default function DashboardView({
       </div>
 
       {/* Date Range Filter */}
-      <div className="flex items-center justify-end">
-        <button className="flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 min-w-[180px]">
-          <span>Date Range</span>
-          <Calendar className="w-4 h-4 ml-auto text-gray-400" />
-        </button>
+      <div className="flex items-center justify-end gap-2">
+        <Popover open={popoverOpen} onOpenChange={(open) => {
+          setPopoverOpen(open);
+          if (open) setClickCount(0);
+        }}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn(
+                "justify-start text-left font-normal min-w-[260px]",
+                !dateRange && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {dateRange?.from ? (
+                dateRange.to && clickCount >= 2 ? (
+                  format(dateRange.from, "yyyy-MM-dd") ===
+                    format(dateRange.to, "yyyy-MM-dd") ? (
+                    format(dateRange.from, "MMM dd, yyyy")
+                  ) : (
+                    <>
+                      {format(dateRange.from, "MMM dd, yyyy")} -{" "}
+                      {format(dateRange.to, "MMM dd, yyyy")}
+                    </>
+                  )
+                ) : (
+                  format(dateRange.from, "MMM dd, yyyy")
+                )
+              ) : (
+                <span>Select date range</span>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="end">
+            <Calendar
+              mode="range"
+              defaultMonth={dateRange?.from}
+              selected={dateRange}
+              onSelect={(range) => {
+                setDateRange(range);
+                const newCount = clickCount + 1;
+                setClickCount(newCount);
+                // Close popover after the second click (range complete)
+                if (newCount >= 2) {
+                  setPopoverOpen(false);
+                }
+              }}
+              numberOfMonths={2}
+            />
+          </PopoverContent>
+        </Popover>
+        {dateFilter && (
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={handleClearFilter}
+            className="h-10 w-10"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
       </div>
 
       {/* All Metrics in Single Row */}

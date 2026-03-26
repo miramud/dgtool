@@ -1,5 +1,9 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
-import { handleSessionExpiry, isSessionExpired } from './auth-utils';
+import {
+  getAuthorizationHeader,
+  handleSessionExpiry,
+  isSessionExpired,
+} from './auth-utils';
 
 export class ApiClient {
   private axiosInstance: AxiosInstance;
@@ -20,7 +24,11 @@ export class ApiClient {
       (config) => {
         const token = localStorage.getItem('access_token');
         if (token && !isSessionExpired(token)) {
-          config.headers.Authorization = `Bearer ${token}`;
+          const authorizationHeader = getAuthorizationHeader(token);
+
+          if (authorizationHeader) {
+            config.headers.Authorization = authorizationHeader;
+          }
         }
         return config;
       },

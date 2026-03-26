@@ -3,6 +3,7 @@ export enum DATA_CATALOGUE_API_ROUTES {
     DATASET_BY_ID = "/datasets/{id}",
     DATASET_PROCESSED_DATA = "/datasets/{id}/processed-data",
     DATASET_APPEND_BY_ID = "/datasets/{id}/append",
+    DATASET_EDIT_ROW_BY_ID = "/datasets/{id}/edit-row",
     DATASET_DB_VALIDATE = "/datasets/db-info/validate",
     DATASET_DB_TABLES = "/datasets/db-info/tables",
     DATASET_CLEANUP_SESSION = "/datasets/{id}/cleanup-session",

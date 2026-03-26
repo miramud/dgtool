@@ -199,8 +199,6 @@ export interface ReportIssueFormData {
   type: IssueType;
   severity: SeverityLevel;
   nextReviewDate?: string;
-  status: IssueStatus;
   dueDate?: string;
   description: string;
-  file?: File;
 }

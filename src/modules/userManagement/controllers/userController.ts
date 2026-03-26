@@ -1,5 +1,6 @@
 import { USER_API_ROUTES } from "@/constants/user-api-routes";
 import useApiManager from "@/constants/controllers/mainController";
+import { getAuthorizationHeader } from "@/lib/auth-utils";
 import { useQuery } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import { User, UserFormData } from "../types/user";
@@ -119,10 +120,12 @@ export const useUserProfile = () => {
       if (!token) {
         throw new Error("No access token found");
       }
+
+      const authorizationHeader = getAuthorizationHeader(token);
       
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}${USER_API_ROUTES.GET_USER_PROFILE}`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          ...(authorizationHeader ? { Authorization: authorizationHeader } : {}),
           'Content-Type': 'application/json',
         },
       });

@@ -177,6 +177,35 @@ export const useAppendDataset = () => {
     };
 };
 
+export interface EditDatasetRowPayload {
+    row_index: number;
+    data: Record<string, string>;
+}
+
+export const useEditDatasetRow = () => {
+    const editDatasetRow = async (datasetId: string, payload: EditDatasetRowPayload) => {
+        const endpoint = DATA_CATALOGUE_API_ROUTES.DATASET_EDIT_ROW_BY_ID.replace("{id}", datasetId);
+        const response = await axiosCallerWithToken.patch(endpoint, payload);
+        return response.data;
+    };
+
+    const { mutateAsync, isPending, isSuccess, isError, error } = useMutation({
+        mutationFn: ({ datasetId, payload }: { datasetId: string; payload: EditDatasetRowPayload }) =>
+            editDatasetRow(datasetId, payload),
+        onError: (error: any) => {
+            toast.error(getApiErrorMessage(error));
+        },
+    });
+
+    return {
+        editDatasetRow: mutateAsync,
+        isLoading: isPending,
+        isSuccess,
+        isError,
+        error,
+    };
+};
+
 export const useUpdateDataCatalogue = () => {
     const { callApi, data, isLoading, isSuccess, isError, error } =
         useApiManager<DataCatalogue, AxiosError, DataCatalogueFormData & { id: string }>({
@@ -259,7 +288,9 @@ export const useGetDatasetProcessedData = (id: string) => {
         queryFn: async () => {
             const endpoint = DATA_CATALOGUE_API_ROUTES.DATASET_PROCESSED_DATA.replace("{id}", id);
             const response = await axiosCallerWithToken.get(endpoint, {
-                responseType: "text",
+                params: {
+                    format: "json",
+                },
             });
             return response.data;
         },
