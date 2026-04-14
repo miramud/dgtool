@@ -15,6 +15,88 @@ export interface DataCatalogueResponse {
     limit: number;
 }
 
+export interface GetDataCatalogueParams {
+    business_domain?: string;
+    data_source?: string;
+    ordering?: string;
+    page?: number;
+    search?: string;
+    sensitivity?: string;
+    size?: number;
+}
+
+export interface GetDataCatalogueResult {
+    results: DataCatalogue[];
+    count: number;
+    next?: string | null;
+    previous?: string | null;
+}
+
+export interface DatasetVersionEditor {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    mobile_number?: string;
+}
+
+export interface DatasetVersion {
+    id: string;
+    dataset: string;
+    dataset_reference: string;
+    dataset_name: string;
+    version_number: number;
+    change_type: string;
+    description: string;
+    editor: DatasetVersionEditor | null;
+    file_name: string;
+    file_url: string;
+    metadata: string;
+    cleanup_session: string;
+    created_datetime: string;
+    updated_datetime: string;
+}
+
+export interface DatasetVersionsResult {
+    results: DatasetVersion[];
+    count: number;
+}
+
+const normalizeStringOptions = (payload: any): string[] => {
+    const root = payload?.data ?? payload;
+    const results = root?.results ?? payload?.results ?? root ?? [];
+
+    if (!Array.isArray(results)) {
+        return [];
+    }
+
+    return results
+        .map((item) => {
+            if (typeof item === "string") {
+                return item.trim();
+            }
+
+            if (typeof item?.name === "string") {
+                return item.name.trim();
+            }
+
+            if (typeof item?.value === "string") {
+                return item.value.trim();
+            }
+
+            if (typeof item?.business_domain === "string") {
+                return item.business_domain.trim();
+            }
+
+            if (typeof item?.tag === "string") {
+                return item.tag.trim();
+            }
+
+            return "";
+        })
+        .filter((item) => item.length > 0);
+};
+
 export interface CreateDatasetFormData {
     name: string;
     description: string;
@@ -256,12 +338,31 @@ export const useDeleteDataCatalogue = () => {
     };
 };
 
-export const useGetDataCatalogue = () => {
+const normalizeDataCatalogueListResponse = (payload: any): GetDataCatalogueResult => {
+    const root = payload?.data ?? payload;
+    const results = root?.results ?? payload?.results ?? root ?? [];
+
+    return {
+        results: Array.isArray(results) ? results : [],
+        count:
+            root?.count ??
+            payload?.count ??
+            (Array.isArray(results) ? results.length : 0),
+        next: root?.next ?? payload?.next ?? null,
+        previous: root?.previous ?? payload?.previous ?? null,
+    };
+};
+
+export const useGetDataCatalogue = (params: GetDataCatalogueParams = {}) => {
     return useQuery({
-        queryKey: ["dataCatalogue"],
+        queryKey: ["dataCatalogue", params],
         queryFn: async () => {
-            const response = await axiosCallerWithToken.get(DATA_CATALOGUE_API_ROUTES.DATASETS);
-            return response.data.data?.results || response.data.results || response.data.data || response.data;
+            const response = await axiosCallerWithToken.get(DATA_CATALOGUE_API_ROUTES.DATASETS, {
+                params: Object.fromEntries(
+                    Object.entries(params).filter(([, value]) => value !== undefined && value !== "")
+                ),
+            });
+            return normalizeDataCatalogueListResponse(response.data);
         },
         staleTime: 5 * 60 * 1000, // 5 minutes
         retry: 1,
@@ -278,6 +379,55 @@ export const useGetDataCatalogueById = (id: string) => {
         },
         enabled: !!id, // Only fetch when id is provided
         staleTime: 5 * 60 * 1000, // 5 minutes
+        retry: 1,
+    });
+};
+
+export const useGetDatasetVersions = (datasetId: string) => {
+    return useQuery({
+        queryKey: ["datasetVersions", datasetId],
+        queryFn: async () => {
+            const response = await axiosCallerWithToken.get("/datasets/versions", {
+                params: {
+                    dataset: datasetId,
+                },
+            });
+
+            const root = response.data?.data ?? response.data;
+            const results = root?.results ?? [];
+            const paginator = root?.paginator;
+
+            return {
+                results: Array.isArray(results) ? results : [],
+                count: paginator?.count ?? (Array.isArray(results) ? results.length : 0),
+            } satisfies DatasetVersionsResult;
+        },
+        enabled: !!datasetId,
+        staleTime: 5 * 60 * 1000,
+        retry: 1,
+    });
+};
+
+export const useGetDatasetTags = () => {
+    return useQuery({
+        queryKey: ["datasetTags"],
+        queryFn: async () => {
+            const response = await axiosCallerWithToken.get("/datasets/tags");
+            return normalizeStringOptions(response.data);
+        },
+        staleTime: 5 * 60 * 1000,
+        retry: 1,
+    });
+};
+
+export const useGetDatasetBusinessDomains = () => {
+    return useQuery({
+        queryKey: ["datasetBusinessDomains"],
+        queryFn: async () => {
+            const response = await axiosCallerWithToken.get("/datasets/business-domains");
+            return normalizeStringOptions(response.data);
+        },
+        staleTime: 5 * 60 * 1000,
         retry: 1,
     });
 };

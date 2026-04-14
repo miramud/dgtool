@@ -14,12 +14,13 @@ export function LandingFeatureSection() {
 
             <div className="container mx-auto px-4 relative z-10">
                 <div className="text-center md:mb-16">
-                    <p className="text-white font-medium text-lg">
-                        Product Features
-                    </p>
                     <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-                        Everything You Need for Smarter Governance
+                        A Complete Data Governance Platform for Enterprise Use
                     </h2>
+                    <p className="text-white/90 font-medium text-lg max-w-3xl mx-auto">
+                        Steward Core combines multiple capabilities into a single platform,
+                        eliminating the need for disconnected tools and manual processes.
+                    </p>
                 </div>
 
                 <div className="relative max-w-5xl mx-auto">

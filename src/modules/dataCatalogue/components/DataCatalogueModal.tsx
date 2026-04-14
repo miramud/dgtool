@@ -12,7 +12,14 @@ import { axiosCallerWithToken } from "@/lib/helpers";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { DataCatalogue, DataCatalogueFormData, createDataCatalogueSchema } from "../types/dataCatalogue";
-import { useGetMetadataTemplates, useGetDatasetTypes, useCreateDataCatalogue, CreateDatasetFormData } from "../controllers/dataCatalogueController";
+import {
+  useGetMetadataTemplates,
+  useGetDatasetTypes,
+  useCreateDataCatalogue,
+  CreateDatasetFormData,
+  useGetDatasetTags,
+  useGetDatasetBusinessDomains,
+} from "../controllers/dataCatalogueController";
 import { useState, useEffect, useRef } from "react";
 import { useCentrifugo } from "@/hooks/useCentrifugo";
 import { Progress } from "@/components/ui/progress";
@@ -39,6 +46,13 @@ const normalizeTagsToCsv = (tags: unknown): string => {
   }
   return "";
 };
+
+const toSentenceCase = (value: string): string =>
+  value
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ");
 
 export default function DataCatalogueModal({
   open,
@@ -195,6 +209,8 @@ export default function DataCatalogueModal({
   // Get dataset types and templates
   const { data: datasetTypes, isLoading: isLoadingDatasetTypes } = useGetDatasetTypes();
   const { data: metadataTemplates, isLoading: isLoadingTemplates } = useGetMetadataTemplates(selectedDatasetType);
+  const { data: datasetTags = [] } = useGetDatasetTags();
+  const { data: businessDomains = [] } = useGetDatasetBusinessDomains();
   
   // Create dataset hook
   const { createDataCatalogue, isLoading: isCreatingDataset } = useCreateDataCatalogue();
@@ -448,22 +464,19 @@ export default function DataCatalogueModal({
               placeholder="Enter dataset's name"
               required
             />
-            <FormSelect
+            <FormInput
               name="business_domain"
               label="Business Domain"
-              placeholder="Select business's domain"
-              options={[
-                { value: "finance", label: "Finance" },
-                { value: "hr", label: "HR" },
-                { value: "operations", label: "Operations" },
-                { value: "marketing", label: "Marketing" },
-              ]}
+              placeholder="Select or type a business domain"
+              suggestions={businessDomains.map(toSentenceCase)}
               required
             />
             <FormInput
               name="tags"
               label="Tags"
-              placeholder="Enter tags (comma separated)"
+              placeholder="Select or type tags (comma separated)"
+              suggestions={datasetTags.map(toSentenceCase)}
+              suggestionMode="comma"
               required
             />
             <FormSelect

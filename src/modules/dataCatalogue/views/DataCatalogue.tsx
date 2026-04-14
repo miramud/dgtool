@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import AdvancedTable from "../../../components/shared/AdvancedTable";
 import StatusBadge from "../../../components/shared/StatusBadge";
-import { BusinessDescription } from "../types/dataCatalogue";
 import type { DataCatalogue } from "../types/dataCatalogue";
 import IssueBadge from "../components/IssueBadge";
 import {
@@ -55,6 +54,20 @@ interface EnhancedDataCatalogueProps {
   className?: string;
 }
 
+const BUSINESS_DOMAIN_OPTIONS = [
+  { value: "", label: "All Data" },
+  { value: "finance", label: "Finance" },
+  { value: "hr", label: "HR" },
+  { value: "operations", label: "Operations" },
+  { value: "marketing", label: "Marketing" },
+];
+
+const DATA_SOURCE_OPTIONS = [
+  { value: "", label: "All Data Sources" },
+  { value: "CSV", label: "File Upload" },
+  { value: "POSTGRES", label: "PostgreSQL Database" },
+];
+
 const normalizeTags = (tags: unknown): string[] => {
   if (Array.isArray(tags)) {
     return tags
@@ -81,8 +94,8 @@ export default function DataCatalogue({
     DataCatalogue[]
   >([]);
   const [searchValue, setSearchValue] = useState("");
-  const [selectedBusinessDescription, setSelectedBusinessDescription] =
-    useState("");
+  const [selectedBusinessDomain, setSelectedBusinessDomain] = useState("");
+  const [selectedDataSource, setSelectedDataSource] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [requestAccessModalOpen, setRequestAccessModalOpen] = useState(false);
@@ -90,66 +103,31 @@ export default function DataCatalogue({
   const [connectedSource, setConnectedSource] =
     useState<ConnectedSourceSelection | null>(null);
 
-  // Get data from API using React Query
-  const { data: apiData, isLoading, refetch } = useGetDataCatalogue();
+  const debouncedSearchValue = useDebounce(searchValue, 500);
 
-  // Delete hook
+  const queryParams = useMemo(
+    () => ({
+      page: currentPage,
+      size: 15,
+      search: debouncedSearchValue || undefined,
+      business_domain: selectedBusinessDomain || undefined,
+      data_source: selectedDataSource || undefined,
+    }),
+    [currentPage, debouncedSearchValue, selectedBusinessDomain, selectedDataSource]
+  );
+
+  const { data: apiData, isLoading, refetch } = useGetDataCatalogue(queryParams);
+
   const { deleteDataCatalogue, isLoading: isDeleting } =
     useDeleteDataCatalogue();
 
-  const debouncedSearchValue = useDebounce(searchValue, 500);
+  const dataCatalogueData = apiData?.results ?? [];
+  const totalItems = apiData?.count ?? dataCatalogueData.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / 15));
 
-  // Use API data or fallback to empty array
-  const dataCatalogueData = useMemo(
-    () => (Array.isArray(apiData) ? apiData : []),
-    [apiData]
-  );
-
-  // BusinessDescription options for filtering (mimicking performance dialog pattern)
-  const businessDescriptionOptions = [
-    "All Business Descriptions",
-    ...Object.values(BusinessDescription),
-  ];
-
-  // Filter data catalogue based on search and business description
-  const filteredDataCatalogue = useMemo(() => {
-    let dataCatalogue = [...dataCatalogueData];
-
-    // Apply search filter
-    if (debouncedSearchValue) {
-      dataCatalogue = dataCatalogue.filter(
-        (item) => {
-          const itemTags = normalizeTags((item as any).tags);
-          return (
-            item.businessTechnicalSpecification
-            ?.toLowerCase()
-            .includes(debouncedSearchValue.toLowerCase()) ||
-          item.businessDescription
-            ?.toLowerCase()
-            .includes(debouncedSearchValue.toLowerCase()) ||
-          item.usageGuidelines
-            ?.toLowerCase()
-            .includes(debouncedSearchValue.toLowerCase()) ||
-          itemTags.some((tag: string) =>
-            tag.toLowerCase().includes(debouncedSearchValue.toLowerCase())
-          )
-          );
-        }
-      );
-    }
-
-    // Apply business description filter
-    if (
-      selectedBusinessDescription &&
-      selectedBusinessDescription !== "All Business Descriptions"
-    ) {
-      dataCatalogue = dataCatalogue.filter(
-        (item) => item.businessDescription === selectedBusinessDescription
-      );
-    }
-
-    return dataCatalogue;
-  }, [debouncedSearchValue, selectedBusinessDescription, dataCatalogueData]);
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchValue, selectedBusinessDomain, selectedDataSource]);
 
   // Table columns configuration
   const columns = [
@@ -175,7 +153,11 @@ export default function DataCatalogue({
           </div>
         );
       case "businessDescription":
-        return <span className='text-gray-900'>{item.description}</span>;
+        return (
+          <span className='text-gray-900'>
+            {item.business_domain || item.description || "--"}
+          </span>
+        );
       case "usageGuidelines":
         return <span className='text-gray-900'>{item.dataset_type}</span>;
       case "tags":
@@ -206,7 +188,7 @@ export default function DataCatalogue({
           </span>
         );
       case "dataSource":
-        return <span className='text-gray-900'>{item.sensitivity}</span>;
+        return <span className='text-gray-900'>{item.data_source || "--"}</span>;
       default:
         return null;
     }
@@ -277,9 +259,8 @@ export default function DataCatalogue({
   };
 
   // Pagination info (mimicking performance dialog pattern)
-  const startItem = (currentPage - 1) * 15 + 1;
-  const endItem = Math.min(currentPage * 15, filteredDataCatalogue.length);
-  const totalPages = Math.ceil(filteredDataCatalogue.length / 15);
+  const startItem = totalItems === 0 ? 0 : (currentPage - 1) * 15 + 1;
+  const endItem = Math.min(currentPage * 15, totalItems);
 
   return (
     <div className={cn("space-y-6", className)}>
@@ -325,30 +306,37 @@ export default function DataCatalogue({
           <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4' />
           <input
             type='text'
-            placeholder='Schema, description, guidelines, tags'
+            placeholder='Search datasets'
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
             className='w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4A4A7A] focus:border-transparent text-sm'
           />
         </div>
 
-        {/* Filter Button */}
         <div className='relative'>
           <select
-            value={selectedBusinessDescription}
-            onChange={(e) =>
-              setSelectedBusinessDescription(
-                e.target.value === "All Business Descriptions"
-                  ? ""
-                  : e.target.value
-              )
-            }
+            value={selectedBusinessDomain}
+            onChange={(e) => setSelectedBusinessDomain(e.target.value)}
             className='appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 text-sm text-gray-700 focus:ring-2 focus:ring-[#4A4A7A] focus:border-transparent cursor-pointer'
           >
-            <option value=''>Filter</option>
-            {businessDescriptionOptions.map((desc) => (
-              <option key={desc} value={desc}>
-                {desc}
+            {BUSINESS_DOMAIN_OPTIONS.map((option) => (
+              <option key={option.value || "all-data"} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <Filter className='absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none' />
+        </div>
+
+        <div className='relative'>
+          <select
+            value={selectedDataSource}
+            onChange={(e) => setSelectedDataSource(e.target.value)}
+            className='appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 text-sm text-gray-700 focus:ring-2 focus:ring-[#4A4A7A] focus:border-transparent cursor-pointer'
+          >
+            {DATA_SOURCE_OPTIONS.map((option) => (
+              <option key={option.value || "all-sources"} value={option.value}>
+                {option.label}
               </option>
             ))}
           </select>
@@ -376,7 +364,7 @@ export default function DataCatalogue({
 
       {/* Advanced Table */}
       <AdvancedTable
-        data={filteredDataCatalogue}
+        data={dataCatalogueData}
         columns={columns}
         isLoading={isLoading}
         showCheckBox={true}
@@ -388,7 +376,7 @@ export default function DataCatalogue({
       {/* Pagination */}
       <div className='flex items-center justify-between'>
         <p className='text-sm text-gray-700'>
-          {startItem} - {endItem} of {filteredDataCatalogue.length} data assets
+          {startItem} - {endItem} of {totalItems} data assets
         </p>
         <div className='flex items-center space-x-2'>
           <Button

@@ -5,6 +5,8 @@ export interface DataCatalogue {
     name: string;
     description: string;
     dataset_type: string;
+    business_domain?: string;
+    data_source?: string;
     businessTechnicalSpecification: BusinessTechnicalSpecification;
     sensitivity: string;
     businessDescription: BusinessDescription;

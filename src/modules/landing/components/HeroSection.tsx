@@ -13,9 +13,9 @@ export function LandingHeroSection() {
             <div className="absolute bottom-10 right-1/3 w-64 h-64 bg-primary rounded-full filter blur-[100px] opacity-15 animate-pulse"></div>
 
             <div className="py-20 relative z-10" data-aos="fade-up">
-                <div className="max-w-4xl mx-auto text-center">
+                <div className="max-w-4xl mx-auto text-center px-4">
                     <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-semibold mb-6 text-primary leading-tight">
-                        Take Control of Your Data with Smart Governance
+                        Data Governance Platform for Oil & Gas Companies
                     </h1>
 
                     <Image
@@ -26,10 +26,19 @@ export function LandingHeroSection() {
                         className="w-[40%] block mx-auto -mt-5"
                     />
 
-                    <p className="text-base sm:text-lg md:text-xl mb-8 text-[#475467] max-w-2xl mx-auto font-normal leading-relaxed">
-                        Ensure data quality, compliance, and trust with a platform designed for enterprises of all sizes.
-                        Our StewardCore platform helps enterprises ensure data quality, security, and compliance — all in
-                        one simple, modern workspace.
+                    <p className="text-base sm:text-lg md:text-xl mb-4 text-[#475467] max-w-3xl mx-auto font-normal leading-relaxed">
+                        Data governance platform solutions are essential for oil and gas companies that rely on
+                        accurate, secure, and well-managed data to operate efficiently. In today&apos;s complex energy
+                        landscape, organizations generate massive volumes of data from exploration, drilling,
+                        production, and enterprise systems. Without a structured governance framework, this data
+                        quickly becomes fragmented, inconsistent, and difficult to trust.
+                    </p>
+                    <p className="text-base sm:text-lg md:text-xl mb-8 text-[#475467] max-w-3xl mx-auto font-normal leading-relaxed">
+                        Steward Core is built to solve this challenge. It is a modern data governance platform designed
+                        specifically to support oil and gas data governance, helping enterprises ensure data quality,
+                        maintain compliance, and gain full visibility into their data ecosystem. By combining governance,
+                        metadata management, and lineage capabilities into one unified platform, Steward Core
+                        enables organizations to transform raw data into a trusted strategic asset.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12 md:mb-16 px-5">
                         <Link href={LANDING_ROUTES.CONTACT}>

@@ -2,6 +2,9 @@ export enum LANDING_ROUTES {
     HOME = "/",
     ABOUT = "/about-us",
     CONTACT = "/contact-us",
+    DATA_CATALOG = "/data-catalog",
+    DATA_LINEAGE = "/data-lineage",
+    METADATA_MANAGEMENT = "/metadata-management",
 }
 
 export enum AUTH_ROUTES {

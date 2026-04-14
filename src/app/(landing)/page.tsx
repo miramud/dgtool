@@ -2,11 +2,11 @@ import LandingPageClient from "@/modules/landing/components/LandingPageClient";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-    title: "StewardCore -  Take Control of Your Data with Smart Governance",
+    title: "Data Governance Platform for Oil & Gas | Steward Core",
     description:
-        " Ensure data quality, compliance, and trust with a platform designed for enterprises of all sizes. Our StewardCore platform helps enterprises ensure data quality, security, and compliance — all in one simple, modern workspace.",
+        "Data governance platform for oil and gas companies. Improve data quality, compliance, lineage, and decision-making with Steward Core.",
     keywords:
-        "StewardCore, best StewardCore software, enterprise StewardCore solutions, open source StewardCores, StewardCore platform, cloud StewardCores",
+        "data governance platform, oil and gas data governance, enterprise data catalog, data lineage, metadata management, Steward Core",
 };
 
 export default function LandingPage() {

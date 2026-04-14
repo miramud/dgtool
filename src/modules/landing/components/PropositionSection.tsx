@@ -3,20 +3,12 @@ import { propositions } from "../data/propositions";
 
 export function LandingPropositionSection() {
     return (
-        <section className="py-16 sm:py-20 bg-white md:mt-120 overflow-hidden">
+        <section className="py-16 sm:py-20 bg-white overflow-hidden">
             <div className="container">
                 <div className="text-center mb-12 sm:mb-16">
-                    <p className="text-primary font-medium text-base sm:text-lg mb-2">
-                        Value Proposition
-                    </p>
                     <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground mb-4">
-                        Why Steward Core needs to be different
+                        Solve the Biggest Data Challenges in Oil & Gas
                     </h2>
-
-                    <p className="text-base sm:text-lg text-[#3D4347] font-medium max-w-2xl mx-auto">
-                        Our platform centralizes governance, making it simple,
-                        secure, and scalable.
-                    </p>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 max-w-6xl mx-auto">
@@ -41,7 +33,7 @@ export function LandingPropositionSection() {
                                     <h3 className="text-lg sm:text-xl font-semibold text-foreground mb-3 sm:mb-4">
                                         {title}
                                     </h3>
-                                    <p className="text-muted-foreground text-sm sm:text-base whitespace-pre-line">
+                                    <p className="text-muted-foreground text-sm sm:text-base">
                                         {description}
                                     </p>
                                 </CardContent>

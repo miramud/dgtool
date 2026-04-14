@@ -1,19 +1,22 @@
-import { AlertTriangle, Shield, Users } from "lucide-react";
+import { AlertTriangle, Users, Shield } from "lucide-react";
 
 export const propositions = [
     {
         icon: AlertTriangle,
-        title: "Messy Data = Missed Insights",
-        description: "Poor quality data costs enterprises millions.",
+        title: "Messy Data Leads to Missed Opportunities",
+        description:
+            "Inconsistent or poor-quality data often results in inaccurate reporting and lost insights. Steward Core helps standardize data across systems, ensuring that teams work with reliable and validated information.",
     },
     {
         icon: Users,
-        title: "Siloed Ownership",
-        description: "Nobody knows who owns what;\n accountability gets lost.",
+        title: "Siloed Ownership Creates Confusion",
+        description:
+            "When data ownership is unclear, accountability disappears. The platform introduces structured ownership and stewardship models so every dataset has a clear owner and defined responsibility.",
     },
     {
         icon: Shield,
-        title: "Regulatory Pressure",
-        description: "Compliance failures bring fines & reputational\n risk.",
+        title: "Regulatory Pressure Requires Strong Governance",
+        description:
+            "Oil and gas companies must comply with strict regulatory requirements. Steward Core supports audit readiness by tracking data usage, enforcing policies, and maintaining complete visibility across the data lifecycle.",
     },
 ];

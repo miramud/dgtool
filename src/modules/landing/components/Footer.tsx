@@ -1,12 +1,13 @@
 import Image from "next/image";
+import Link from "next/link";
 import { footerLinks } from "../data/footer";
 import { Dot } from "lucide-react";
 
 export function LandingFooter() {
     return (
-        <footer className="bg-[#181918] text-white" data-aos="fade-in">
+        <footer className="bg-[#181918] text-white">
             <div className="container py-16">
-                <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto_1fr] gap-x-20 gap-y-8 md:gap-y-0 items-start justify-items-start">
+                <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto_auto_1fr] gap-x-16 gap-y-8 md:gap-y-0 items-start justify-items-start">
                     <div>
                         <Image
                             src="/images/right-click-logo.svg"
@@ -32,12 +33,30 @@ export function LandingFooter() {
                         <ul className="space-y-2 text-sm">
                             {footerLinks.company.map(({ label, href }) => (
                                 <li key={label}>
-                                    <a
+                                    <Link
                                         href={href}
-                                        className="hover:text-white transition-colors"
+                                        className="hover:text-white/80 transition-colors"
                                     >
                                         {label}
-                                    </a>
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+
+                    <div className="min-w-[120px]">
+                        <h3 className="text-white font-medium mb-4 text-lg">
+                            Services
+                        </h3>
+                        <ul className="space-y-2 text-sm">
+                            {footerLinks.services.map(({ label, href }) => (
+                                <li key={label}>
+                                    <Link
+                                        href={href}
+                                        className="hover:text-white/80 transition-colors"
+                                    >
+                                        {label}
+                                    </Link>
                                 </li>
                             ))}
                         </ul>
@@ -52,7 +71,7 @@ export function LandingFooter() {
                                 <li key={label}>
                                     <a
                                         href={href}
-                                        className="hover:text-white transition-colors"
+                                        className="hover:text-white/80 transition-colors"
                                     >
                                         {label}
                                     </a>

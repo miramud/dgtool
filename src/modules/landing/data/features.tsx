@@ -1,46 +1,33 @@
 import {
     Database,
     CheckCircle,
-    Users,
     Eye,
     FileText,
-    Lock,
 } from "lucide-react";
 
 export const features = [
     {
         icon: Database,
-        title: "Data Cataloging & \n Metadata Management",
+        title: "Enterprise Data Catalog\nand Discovery",
         description:
-            "Easily search, classify, and enrich datasets\n with standardized templates.",
+            "The platform includes an enterprise data\ncatalog that enables users to search, discover,\nand understand datasets across the organization.\nThis improves accessibility while maintaining\ngovernance controls.",
     },
     {
         icon: CheckCircle,
-        title: "Data Quality & Profiling",
+        title: "Data Quality\nand Profiling",
         description:
-            "Profile, validate, and monitor your datasets\n to maintain trust in your numbers.",
-    },
-    {
-        icon: Users,
-        title: "Ownership & Stewardship",
-        description:
-            "Assign clear roles and responsibilities for\n accountability.",
+            "Organizations can monitor and validate data to\nensure accuracy and consistency. Automated\nprofiling helps identify issues early, reducing\ndownstream errors.",
     },
     {
         icon: Eye,
-        title: "Lineage & Transparency",
+        title: "Data Lineage\nVisualization",
         description:
-            "Interactive data lineage diagrams show\n exactly where your data comes from.",
+            "With built-in data lineage visualization, teams\ncan track how data flows from source systems to\nreports and dashboards. This transparency\nimproves trust and simplifies compliance.",
     },
     {
         icon: FileText,
-        title: "Policies & Compliance",
-        description: "Ensure regulatory compliance with audit-\nready reports.",
-    },
-    {
-        icon: Lock,
-        title: "Access Control & Security",
+        title: "Metadata Management\nand Standardization",
         description:
-            "Granular access rules keep sensitive data\n safe without slowing teams down.",
+            "The platform acts as a metadata management\ntool, allowing organizations to define data\nstandards, maintain a data dictionary, and ensure\nconsistency across departments.",
     },
 ];

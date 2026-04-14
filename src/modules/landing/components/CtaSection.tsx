@@ -15,20 +15,18 @@ export function LandingCtaSection() {
 
                     <div className="container mx-auto px-4 text-center relative z-10">
                         <h2 className="text-3xl md:text-5xl font-bold mb-6">
-                            Ready to Govern Smarter?
+                            Start Your Data Governance Journey Today
                         </h2>
+                        <p className="text-lg mb-4 text-purple-100 max-w-2xl mx-auto">
+                            If your organization is struggling with data silos, compliance risks, or inconsistent
+                            reporting, now is the time to implement a structured governance framework.
+                        </p>
                         <p className="text-lg mb-8 text-purple-100 max-w-2xl mx-auto">
-                            Try it free for 14 days. No credit card required.
+                            Steward Core provides the tools and expertise needed to build a strong foundation for
+                            data governance in oil and gas. With the right platform in place, your data becomes a
+                            reliable asset that supports growth, efficiency, and innovation.
                         </p>
                         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                            {/* <Link href={AUTH_ROUTES.SIGN_UP}>
-                                <Button
-                                    size="lg"
-                                    className="bg-white text-primary hover:bg-gray-100"
-                                >
-                                    Start Free Trial
-                                </Button>
-                            </Link> */}
                             <Link href={LANDING_ROUTES.CONTACT}>
                                 <Button
                                     size="lg"

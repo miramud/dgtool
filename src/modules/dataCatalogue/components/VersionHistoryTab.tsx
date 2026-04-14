@@ -1,51 +1,73 @@
 "use client";
 
 import AdvancedTable from "@/components/shared/AdvancedTable";
+import { Button } from "@/components/ui/button";
+import { formatDate } from "@/lib/utils";
+import {
+  DatasetVersion,
+  useGetDatasetVersions,
+} from "../controllers/dataCatalogueController";
+import { Download } from "lucide-react";
 
 interface VersionHistoryTabProps {
   dataset: any;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export default function VersionHistoryTab({ dataset }: VersionHistoryTabProps) {
-  const versionHistory = [
-    {
-      version: "v1.3",
-      date: "Aug 20, 2025",
-      editor: "Mary Smith",
-      description: "Updated schema, added Water_Cut field."
-    },
-    {
-      version: "v1.2", 
-      date: "july 15, 2025",
-      editor: "John Doe",
-      description: "Fixed missing Gas_Produced records."
-    },
-    {
-      version: "v1.1",
-      date: "Jun 05, 2025", 
-      editor: "System",
-      description: "Initial dataset upload."
-    }
-  ];
+  const { data, isLoading } = useGetDatasetVersions(dataset?.id);
+  const versionHistory = data?.results ?? [];
 
   const columns = [
     { key: "version", header: "Version" },
     { key: "date", header: "Date" },
     { key: "editor", header: "Editor" },
-    { key: "description", header: "Description" }
+    { key: "download", header: "Download Url" },
   ];
 
-  const getFormattedValue = (item: any, columnKey: string) => {
+  const getEditorLabel = (item: DatasetVersion) => {
+    if (item.editor?.first_name || item.editor?.last_name) {
+      return `${item.editor?.first_name ?? ""} ${item.editor?.last_name ?? ""}`.trim();
+    }
+
+    return item.editor?.email || "--";
+  };
+
+  const getFormattedValue = (item: DatasetVersion, columnKey: string) => {
     switch (columnKey) {
       case "version":
-        return <span className="font-medium text-gray-900">{item.version}</span>;
+        return (
+          <span className="font-medium text-gray-900">
+            v{item.version_number}
+          </span>
+        );
       case "date":
-        return <span className="text-gray-700">{item.date}</span>;
+        return (
+          <span className="text-gray-700">
+            {formatDate(item.created_datetime)}
+          </span>
+        );
       case "editor":
-        return <span className="text-gray-700">{item.editor}</span>;
-      case "description":
-        return <span className="text-gray-700">{item.description}</span>;
+        return <span className="text-gray-700">{getEditorLabel(item)}</span>;
+      case "download":
+        return item.file_url ? (
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="h-8"
+          >
+            <a
+              href={item.file_url}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Download
+            </a>
+          </Button>
+        ) : (
+          <span className="text-gray-400">--</span>
+        );
       default:
         return null;
     }
@@ -56,7 +78,7 @@ export default function VersionHistoryTab({ dataset }: VersionHistoryTabProps) {
       <AdvancedTable
         data={versionHistory}
         columns={columns}
-        isLoading={false}
+        isLoading={isLoading}
         showCheckBox={false}
         options={[]}
         getFormattedValue={getFormattedValue}
