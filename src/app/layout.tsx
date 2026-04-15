@@ -13,6 +13,9 @@ const poppins = Poppins({
 export const metadata: Metadata = {
     title: "StewardCore",
     description: "StewardCore",
+    verification: {
+        google: "Ca6PVh9xgfPl2l6eAcP0TLCMiFcA5l_4bbv2YwhjCMs",
+    },
 };
 
 export default function RootLayout({
